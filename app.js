@@ -1,6 +1,6 @@
 const STORAGE_KEY = "where-to-go-app-state";
 const AI_SETTINGS_STORAGE_KEY = "where-to-go-ai-settings";
-const APP_VERSION = "v1.31";
+const APP_VERSION = "v1.32";
 
 const CONFIG = {
   USE_MOCK: false,
@@ -698,6 +698,9 @@ function renderAiSettingsMarkup() {
           <span class="label">API 키</span>
           <input class="input" type="password" name="aiApiKey" value="" placeholder="새 키 입력" autocomplete="off" />
         </label>
+
+        <p class="screen-label">개인 테스트용입니다. 배포용 서비스에서는 서버 연동을 사용하세요.</p>
+        <p class="screen-label">API Key는 sessionStorage에만 저장되고 localStorage에는 저장하지 않습니다.</p>
 
         <section class="status-card">
           <p>테스트용입니다. 운영 서비스 키는 넣지 마세요.</p>
