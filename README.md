@@ -1,93 +1,52 @@
 # WHERE TO GO?
 
-Travel planner MVP with a static front end and a Node.js AI proxy server.
+브라우저에서 `npm install` 없이 Gemini / Groq API를 직접 호출하는 여행 추천 웹앱입니다.
 
-## Project Overview
+## 실행 방법
 
-- Front end: HTML, CSS, JavaScript
-- Server: Node.js + Express
-- AI providers: Gemini or Groq
-- Mock/API switch: `CONFIG.USE_MOCK`
+1. `index.html`을 브라우저에서 엽니다.
+2. 화면의 `AI 설정`을 엽니다.
+3. Provider를 `Gemini` 또는 `Groq`로 선택합니다.
+4. API Key를 입력합니다.
+5. 필요하면 Model을 확인하거나 수정합니다.
+6. 홈 화면에서 조건을 입력한 뒤 `옵션 보기`를 실행합니다.
 
-## Folder Structure
+## Gemini API Key 준비
 
-```text
-WHERE TO GO/
-├─ index.html
-├─ style.css
-├─ app.js
-├─ server.js
-├─ package.json
-├─ .env.example
-└─ README.md
-```
+1. Google AI Studio에서 Gemini API Key를 발급합니다.
+2. 발급한 키를 `AI 설정`의 API Key 칸에 입력합니다.
+3. Provider는 `Gemini`로 선택합니다.
+4. Model은 기본값 `gemini-2.5-flash`를 사용해도 됩니다.
 
-## Install
+## Groq API Key 준비
 
-```bash
-npm install
-```
+1. Groq Console에서 API Key를 발급합니다.
+2. 발급한 키를 `AI 설정`의 API Key 칸에 입력합니다.
+3. Provider는 `Groq`로 선택합니다.
+4. Model은 기본값 `llama-3.3-70b-versatile`를 사용해도 됩니다.
 
-## .env Setup
+## API Key 저장 방식
 
-Create a `.env` file in the project root.
+- API Key는 `sessionStorage`만 사용합니다.
+- 브라우저를 닫으면 API Key가 사라집니다.
+- `localStorage`에는 저장하지 않습니다.
 
-```env
-AI_PROVIDER=gemini
+## 주의사항
 
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
+- 이 방식은 개인 테스트용입니다.
+- 배포용으로는 서버 프록시를 사용하세요.
+- API Key가 브라우저 네트워크 요청에 노출될 수 있습니다.
 
-GROQ_API_KEY=your_groq_api_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
+## 문제가 생겼을 때
 
-PORT=3000
-```
+1. API Key가 제대로 입력되어 있는지 확인합니다.
+2. Provider가 `Gemini` 또는 `Groq`로 맞는지 확인합니다.
+3. Model 이름이 올바른지 확인합니다.
+4. CORS 또는 브라우저 차단 여부를 확인합니다.
+5. 화면만 먼저 확인하고 싶으면 `CONFIG.USE_MOCK = true`로 mock 모드를 사용합니다.
 
-Rules:
-- `AI_PROVIDER` must be `gemini` or `groq`.
-- Default provider is `gemini`.
-- When using Gemini, `GEMINI_API_KEY` is required.
-- When using Groq, `GROQ_API_KEY` is required.
-- Never put any API key in `app.js` or `index.html`.
-- The server reads environment variables only on the backend.
+## 참고
 
-## Run the Server
-
-```bash
-npm run dev
-```
-
-The server runs on `PORT` from `.env` and defaults to `3000`.
-
-## Run the Front End
-
-Open `index.html` in the browser, or serve the folder with any static server.
-
-## Mock / API Switch
-
-In `app.js`:
-
-```js
-const CONFIG = {
-  USE_MOCK: true
-};
-```
-
-- `true`: use mock data
-- `false`: call the API server
-
-## API Endpoints
-
-- `POST /api/travel-options`
-- `POST /api/travel-details`
-- `POST /api/travel-revise`
-
-The front end API call structure stays the same.
-
-## Troubleshooting
-
-- If requests fail, check that the server is running on `http://localhost:3000`
-- Check `.env` values
-- If you want to test without an AI key, set `CONFIG.USE_MOCK = true`
-- If AI responses fail to parse, the server returns a JSON error response
+- `mock` 모드는 실제 AI 호출 없이 화면 흐름만 테스트할 때 사용합니다.
+- Direct AI 모드에서는 브라우저가 Gemini / Groq API에 직접 요청합니다.
+- `server.js`는 남겨둘 수 있지만, 이 README 기준의 기본 실행 방식에서는 사용하지 않습니다.

@@ -1,6 +1,6 @@
 const STORAGE_KEY = "where-to-go-app-state";
 const AI_SETTINGS_STORAGE_KEY = "where-to-go-ai-settings";
-const APP_VERSION = "v1.32";
+const APP_VERSION = "v1.33";
 
 const CONFIG = {
   USE_MOCK: false,
@@ -274,7 +274,14 @@ function parseJsonSafely(text) {
 }
 
 function safeJsonParse(text) {
-  return parseJsonSafely(text);
+  try {
+    return parseJsonSafely(text);
+  } catch (error) {
+    debugLog("Safe JSON parse fallback", {
+      message: error?.message || "unknown error"
+    });
+    return null;
+  }
 }
 
 function normalizeProviderName(providerName = "gemini") {
@@ -1713,7 +1720,7 @@ async function callDirectAI({ instructions, input }) {
     success: true,
     provider: result.provider,
     model: result.model,
-    data: safeJsonParse(result.outputText)
+    data: safeJsonParse(result.outputText) || {}
   };
 }
 
@@ -1735,7 +1742,7 @@ const mockTravelService = {
   async revisePlans() {
     return normalizePlansResult({
       plans: appState.detailedPlans,
-      revisionSummary: "Mock 紐⑤뱶?먯꽌???먮낯 ?쇱젙???좎??⑸땲??"
+      revisionSummary: "Mock 모드에서는 원본 일정을 유지합니다."
     });
   }
 };
