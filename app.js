@@ -1,6 +1,6 @@
 ﻿const STORAGE_KEY = "where-to-go-app-state";
 const AI_SETTINGS_STORAGE_KEY = "where-to-go-ai-settings";
-const APP_VERSION = "v1.40.3";
+const APP_VERSION = "v1.40.4";
 
 const CONFIG = {
   USE_MOCK: false,
