@@ -1,6 +1,6 @@
 ﻿const STORAGE_KEY = "where-to-go-app-state";
 const AI_SETTINGS_STORAGE_KEY = "where-to-go-ai-settings";
-const APP_VERSION = "v1.39.2";
+const APP_VERSION = "v1.40.3";
 
 const CONFIG = {
   USE_MOCK: false,
@@ -427,7 +427,7 @@ function normalizeScheduleItem(item = {}) {
 function normalizePlan(plan, index) {
   const itinerary = normalizeArray(plan?.itinerary).map((day, dayIndex) => ({
     day: Number(day?.day) || dayIndex + 1,
-    title: normalizeString(day?.title) || `Day ${dayIndex + 1}`,
+    title: normalizeString(day?.title) || `${dayIndex + 1}일차`,
     schedule: normalizeArray(day?.schedule).map(normalizeScheduleItem).filter((item) => item.time || item.place || item.activity || item.move)
   }));
 
@@ -441,6 +441,57 @@ function normalizePlan(plan, index) {
     weather: normalizeWeather(plan?.weather),
     itinerary
   };
+}
+
+function getDetailDayLabel(day, dayIndex) {
+  const dayNumber = Number(day?.day) || dayIndex + 1;
+  const rawTitle = normalizeString(day?.title);
+
+  if (!rawTitle) {
+    return `${dayNumber}일차`;
+  }
+
+  if (/^[가-힣0-9\s·:()\-]+$/.test(rawTitle)) {
+    return rawTitle;
+  }
+
+  const cleanedTitle = rawTitle.replace(/^Day\s*\d+\s*[:\-]?\s*/i, "").trim();
+  if (cleanedTitle && /^[가-힣0-9\s·:()\-]+$/.test(cleanedTitle)) {
+    return cleanedTitle;
+  }
+
+  return `${dayNumber}일차`;
+}
+
+function getExpectedDayCount(duration) {
+  const normalizedDuration = normalizeString(duration);
+  if (!normalizedDuration) return 0;
+
+  const match = normalizedDuration.match(/(\d+)\s*박\s*(\d+)\s*일/);
+  if (match) {
+    return Number(match[2]) || 0;
+  }
+
+  const dayMatch = normalizedDuration.match(/(\d+)\s*일/);
+  if (dayMatch) {
+    return Number(dayMatch[1]) || 0;
+  }
+
+  return 0;
+}
+
+function isValidDetailPlanLength(plan, expectedDayCount) {
+  if (!expectedDayCount) return true;
+  return normalizeArray(plan?.itinerary).length >= expectedDayCount;
+}
+
+function buildTravelDetailsRetryInstruction(expectedDayCount) {
+  return [
+    `이전 응답의 itinerary가 부족했습니다.`,
+    `각 옵션의 itinerary는 정확히 ${expectedDayCount}일이어야 합니다.`,
+    `하루도 빠뜨리지 말고 Day 1부터 마지막 Day까지 모두 포함하세요.`,
+    `JSON만 다시 반환하세요.`
+  ].join(" ");
 }
 
 function normalizeAiSettings(source = {}) {
@@ -1044,7 +1095,7 @@ function renderDetailsMarkup() {
     <section class="panel screen-flow">
       <div class="screen-header">
         <div>
-          <p class="kicker">DETAILS</p>
+          <p class="kicker">상세</p>
           <h2>상세 일정</h2>
         </div>
         <div class="header-actions">
@@ -1087,7 +1138,7 @@ function renderPlanCard(plan) {
     <article class="detail-card">
       <div class="detail-card-head">
         <div>
-          <p class="option-label">Option ${escapeHtml(plan.label)}</p>
+          <p class="option-label">옵션 ${escapeHtml(plan.label)}</p>
           <h3>${escapeHtml(plan.country)} · ${escapeHtml(plan.city)}</h3>
         </div>
         <div class="option-badges">
@@ -1118,9 +1169,9 @@ function renderPlanCard(plan) {
         </div>
       </div>
 
-      ${plan.itinerary.map((day) => `
+      ${plan.itinerary.map((day, dayIndex) => `
         <section class="detail-day">
-          <h3 class="detail-day-title">${escapeHtml(day.title)}</h3>
+          <h3 class="detail-day-title">${escapeHtml(getDetailDayLabel(day, dayIndex))}</h3>
           <ul class="schedule-timeline">
             ${day.schedule.map((item) => `
               <li>
@@ -1163,11 +1214,13 @@ function getSelectedOptionObjects() {
 
 function buildDetailsRequest() {
   const selectedOptions = getSelectedOptionObjects();
+  const expectedDayCount = getExpectedDayCount(appState.duration);
 
   return {
     selectedOptions,
     travelDate: appState.travelDate,
     duration: appState.duration,
+    expectedDayCount,
     companions: appState.companions,
     budget: appState.budget,
     themes: appState.themes,
@@ -1207,7 +1260,7 @@ function convertFrontendPlansToApiPlans(plans = []) {
       weather: { ...normalizedPlan.weather },
       itinerary: normalizeArray(normalizedPlan.itinerary).map((day, dayIndex) => ({
         day: Number(day?.day) || dayIndex + 1,
-        title: normalizeString(day?.title) || `Day ${dayIndex + 1}`,
+        title: normalizeString(day?.title) || `${dayIndex + 1}일차`,
         schedule: normalizeArray(day?.schedule).map((item) => ({
           time: normalizeString(item?.time),
           place: normalizeString(item?.place),
@@ -1246,7 +1299,7 @@ function buildTravelOptionsInstructions(extraInstruction = "") {
     "comparison에는 movement, cost, rest, shopping, activity, familyFriendly, weatherFit을 포함하세요.",
     "각 comparison 값은 좋음, 중간, 나쁨 중 하나여야 합니다.",
     extraInstruction,
-    "Output shape:",
+    "출력 형식:",
     '{"options":[{"id":"option-a","label":"A","country":"","city":"","theme":"","pros":[],"cons":[],"comparison":{"movement":"좋음","cost":"중간","rest":"나쁨","shopping":"중간","activity":"좋음","familyFriendly":"중간","weatherFit":"나쁨"}}]}'
   ].filter(Boolean).join("\n");
 }
@@ -1258,14 +1311,16 @@ function buildTravelOptionsInput(requestData) {
   ].join("\n");
 }
 
-function buildTravelDetailsInstructions() {
+function buildTravelDetailsInstructions(extraInstruction = "") {
   return [
     "WHERE TO GO 앱의 상세 일정을 생성하세요.",
     "JSON만 반환하세요.",
     "마크다운은 쓰지 마세요.",
     "코드블록은 쓰지 마세요.",
     "JSON 객체 밖의 설명은 쓰지 마세요.",
-    "모든 보이는 문구는 간단한 한국어로 작성하세요. Day 제목만 예외입니다.",
+    "모든 보이는 문구는 간단한 한국어로 작성하세요.",
+    "Day 제목도 한국어로 작성하세요. 예: 1일차, 2일차, 3일차.",
+    "requestData.expectedDayCount가 있으면 그 일수와 정확히 같게 itinerary를 생성하세요.",
     "선택된 옵션 수만큼 계획을 생성하세요.",
     "plans 길이는 selectedOptions 길이와 정확히 같아야 합니다.",
     "duration을 기준으로 일정 일수를 계산하세요. 예: 3박 4일은 4일, 4박 5일은 5일입니다.",
@@ -1276,8 +1331,9 @@ function buildTravelDetailsInstructions() {
     "마지막 날은 자연스럽다면 체크아웃이나 귀국 이동을 포함하세요.",
     "짧은 일정에 맞지 않는 과도한 장거리 이동은 피하세요.",
     "companions, budget, themes, notes를 반영하세요.",
-    "Output shape:",
-    '{"plans":[{"optionId":"option-a","label":"A","country":"","city":"","duration":"","travelDate":"","weather":{"summary":"","temperature":"","rainLevel":"","outfitNote":""},"itinerary":[{"day":1,"title":"Day 1","schedule":[{"time":"09:00","place":"","activity":"","move":""}]}]}]}'
+    extraInstruction,
+    "출력 형식:",
+    '{"plans":[{"optionId":"option-a","label":"A","country":"","city":"","duration":"","travelDate":"","weather":{"summary":"","temperature":"","rainLevel":"","outfitNote":""},"itinerary":[{"day":1,"title":"1일차","schedule":[{"time":"09:00","place":"","activity":"","move":""}]}]}]}'
   ].join("\n");
 }
 
@@ -1298,8 +1354,9 @@ function buildTravelReviseInstructions() {
     "기존 구조를 유지하세요.",
     "무관한 정보는 가능한 한 그대로 두세요.",
     "사용자 수정 요청은 필요한 부분에만 반영하세요.",
-    "보이는 모든 문구는 Day 제목을 제외하고 간단한 한국어로 유지하세요.",
-    "Output shape:",
+    "보이는 모든 문구는 간단한 한국어로 유지하세요.",
+    "Day 제목도 한국어로 유지하세요. 예: 1일차, 2일차, 3일차.",
+    "출력 형식:",
     '{"plans":[{"optionId":"","label":"","country":"","city":"","duration":"","travelDate":"","weather":{"summary":"","temperature":"","rainLevel":"","outfitNote":""},"itinerary":[]}],"revisionSummary":""}'
   ].join("\n");
 }
@@ -1498,7 +1555,7 @@ async function callDirectProvider(provider, requestType, requestPayload, request
     instructions = buildTravelOptionsInstructions(requestMeta.instructionSuffix || "");
     inputTitle = "User input:";
   } else if (requestType === "details") {
-    instructions = buildTravelDetailsInstructions();
+    instructions = buildTravelDetailsInstructions(requestMeta.instructionSuffix || "");
     inputTitle = "User input for detailed travel plan generation:";
   } else {
     instructions = buildTravelRevisionInstructions();
@@ -1621,7 +1678,7 @@ function createMockDetailsFromOptions(options) {
     itinerary: [
       {
         day: 1,
-        title: "Day 1",
+        title: "1일차",
         schedule: [
           { time: "10:00", place: `${option.city} 공항`, activity: "도착 및 이동", move: "공항에서 숙소로 이동" },
           { time: "12:30", place: "현지 식당", activity: "점심 식사", move: "도보" },
@@ -1631,7 +1688,7 @@ function createMockDetailsFromOptions(options) {
       },
       {
         day: 2,
-        title: "Day 2",
+        title: "2일차",
         schedule: [
           { time: "09:00", place: "카페", activity: "아침 시작", move: "도보" },
           { time: "11:00", place: "주요 명소", activity: `${option.theme} 중심 코스`, move: "대중교통" },
@@ -1886,35 +1943,37 @@ const directAiTravelService = {
     }
   },
   async getDetails() {
-    const requestData = {
-      selectedOptions: getSelectedOptionObjects(),
-      travelDate: appState.travelDate,
-      duration: appState.duration,
-      companions: appState.companions,
-      budget: appState.budget,
-      themes: appState.themes,
-      notes: appState.notes
-    };
+    const requestData = buildDetailsRequest();
+    const expectedDayCount = requestData.expectedDayCount;
 
     try {
-      const result = await callDirectAI({
-        instructions: buildTravelDetailsInstructions(),
-        input: buildTravelDetailsInput(requestData)
-      });
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const result = await callDirectAI({
+          instructions: buildTravelDetailsInstructions(
+            attempt > 0 && expectedDayCount ? buildTravelDetailsRetryInstruction(expectedDayCount) : ""
+          ),
+          input: buildTravelDetailsInput(requestData)
+        });
 
-      const normalizedResult = normalizePlansResult({
-        plans: normalizeArray(result.data?.plans)
-      });
+        const normalizedResult = normalizePlansResult({
+          plans: normalizeArray(result.data?.plans)
+        });
 
-      if (normalizedResult.plans.length !== requestData.selectedOptions.length) {
-        throw new Error("다시 시도해 주세요");
+        const hasAllPlans = normalizedResult.plans.length === requestData.selectedOptions.length;
+        const hasAllDays = !expectedDayCount
+          || normalizedResult.plans.every((plan) => isValidDetailPlanLength(plan, expectedDayCount));
+
+        if (hasAllPlans && hasAllDays) {
+          return normalizedResult;
+        }
       }
 
-      return normalizedResult;
+      throw new Error("다시 시도해 주세요");
     } catch (error) {
       debugLog("Direct AI details error", {
         message: error?.message || "unknown error",
         selectedOptionCount: requestData.selectedOptions.length,
+        expectedDayCount,
         requestData
       });
       throw new Error("다시 시도해 주세요");
@@ -1939,10 +1998,10 @@ const directAiTravelService = {
     };
 
     try {
-      const result = await callDirectAI({
-        instructions: buildTravelReviseInstructions(),
-        input: buildTravelReviseInput(requestData)
-      });
+    const result = await callDirectAI({
+      instructions: buildTravelReviseInstructions(),
+      input: buildTravelReviseInput(requestData)
+    });
 
       const normalizedResult = normalizePlansResult({
         plans: normalizeArray(result.data?.plans)

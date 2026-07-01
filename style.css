@@ -233,6 +233,9 @@ button {
 .screen-flow {
   display: grid;
   gap: 16px;
+  align-items: start;
+  justify-items: stretch;
+  overflow: visible;
 }
 
 .content {
@@ -601,6 +604,7 @@ h3 {
 
 .detail-grid {
   align-items: start;
+  align-content: start;
   grid-auto-rows: minmax(min-content, auto);
 }
 
@@ -937,6 +941,13 @@ h3 {
   .weather-info {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  .detail-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: start;
+    align-items: start;
+    grid-auto-rows: minmax(min-content, auto);
+  }
 }
 
 @media (min-width: 960px) {
@@ -945,9 +956,8 @@ h3 {
   }
 
   .detail-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-    grid-auto-rows: minmax(min-content, auto);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: start;
   }
 
   .summary-grid {
