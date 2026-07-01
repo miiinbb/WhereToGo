@@ -1,6 +1,6 @@
 ﻿const STORAGE_KEY = "where-to-go-app-state";
 const AI_SETTINGS_STORAGE_KEY = "where-to-go-ai-settings";
-const APP_VERSION = "v1.37.1";
+const APP_VERSION = "v1.39.2";
 
 const CONFIG = {
   USE_MOCK: false,
@@ -256,7 +256,7 @@ function parseJsonSafely(text) {
   const sourceText = normalizeString(text);
 
   if (!sourceText) {
-    throw new Error("AI ?묐떟??鍮꾩뼱 ?덉뒿?덈떎.");
+    throw new Error("AI 응답이 비어 있습니다.");
   }
 
   const codeBlockMatch = sourceText.match(/```json\s*([\s\S]*?)```|```\s*([\s\S]*?)```/i);
@@ -1221,32 +1221,30 @@ function convertFrontendPlansToApiPlans(plans = []) {
 
 function buildTravelOptionsInstructions(extraInstruction = "") {
   return [
-    "You create travel options for the WHERE TO GO app.",
-    "Return JSON only.",
-    "Do not return markdown.",
-    "Do not return code fences.",
-    "Do not return any explanation outside the JSON object.",
-    "Do not use the Korean words 異붿쿇, 理쒖쟻, 踰좎뒪?? 1?쒖쐞.",
-    "Do not use recommendation language, ranking language, best, top, or winner.",
-    "Generate exactly 3 options.",
-    "The options array length must be exactly 3.",
-    "Use ids option-a, option-b, option-c.",
-    "Use labels A, B, C.",
-    "All visible text must be concise Korean.",
-    "If hasCountry is false, propose 3 different country and city combinations.",
-    "If hasCountry is true, keep all options inside the user's country.",
-    "If city exists, keep all options centered on that city but make their concepts clearly different.",
-    "preferredCountries and excludedCountries may include region names such as ?쒖쑀?? ?⑥쑀?? 遺곸쑀?? ?숈쑀?? ?좊읇, ?꾩떆?? ?숇궓?? 遺곷?.",
-    "Treat those region names as country groups and respect them strictly.",
-    "Do not return a country that belongs to excludedCountries.",
-    "If preferredCountries is provided, prioritize countries that belong to preferredCountries.",
-    "Reflect themes, travelDate, duration, companions, budget, and notes.",
-    "Avoid generic filler like 理쒖떊 ?몃젋?? ?ㅼ뼇???쇳븨紐? ?명뙆, 鍮꾩떬 媛寃?unless it is truly specific and useful.",
-    "Make each pros and cons item concrete and city-specific when possible.",
-    "Do not reuse the same vague pros and cons across multiple options.",
-    "Each option must include pros and cons as concise Korean arrays.",
-    "comparison must include movement, cost, rest, shopping, activity, familyFriendly, weatherFit.",
-    "Each comparison value must be one of 좋음, 중간, 나쁨.",
+    "WHERE TO GO 앱의 여행 옵션을 생성하세요.",
+    "JSON만 반환하세요.",
+    "마크다운은 쓰지 마세요.",
+    "코드블록은 쓰지 마세요.",
+    "JSON 객체 밖의 설명은 쓰지 마세요.",
+    "추천, 최적, 베스트, 1순위 같은 표현은 쓰지 마세요.",
+    "옵션은 정확히 3개만 생성하세요.",
+    "options 배열의 길이는 반드시 3이어야 합니다.",
+    "id는 option-a, option-b, option-c를 사용하세요.",
+    "label은 A, B, C를 사용하세요.",
+    "보이는 모든 문구는 간단한 한국어로 작성하세요.",
+    "hasCountry가 false면 서로 다른 국가와 도시 조합 3개를 제안하세요.",
+    "hasCountry가 true면 사용자가 지정한 국가 안에서만 제안하세요.",
+    "city가 있으면 해당 도시를 중심으로 하되, 각 옵션의 성격은 분명히 다르게 하세요.",
+    "preferredCountries와 excludedCountries에는 서유럽, 동유럽, 북유럽, 아시아, 동남아시아, 북미 같은 지역명이 들어올 수 있습니다.",
+    "그 지역명은 국가 묶음으로 이해하고 엄격하게 반영하세요.",
+    "excludedCountries에 포함된 국가는 반환하지 마세요.",
+    "preferredCountries가 있으면 그 범주에 속한 국가를 우선하세요.",
+    "theme, travelDate, duration, companions, budget, notes를 반영하세요.",
+    "지나치게 흔한 표현은 피하고, 가능하면 국가와 도시별로 구체적으로 작성하세요.",
+    "여러 옵션에 같은 장점과 주의점을 반복하지 마세요.",
+    "각 옵션의 pros와 cons는 간결한 한국어 배열이어야 합니다.",
+    "comparison에는 movement, cost, rest, shopping, activity, familyFriendly, weatherFit을 포함하세요.",
+    "각 comparison 값은 좋음, 중간, 나쁨 중 하나여야 합니다.",
     extraInstruction,
     "Output shape:",
     '{"options":[{"id":"option-a","label":"A","country":"","city":"","theme":"","pros":[],"cons":[],"comparison":{"movement":"좋음","cost":"중간","rest":"나쁨","shopping":"중간","activity":"좋음","familyFriendly":"중간","weatherFit":"나쁨"}}]}'
@@ -1262,23 +1260,22 @@ function buildTravelOptionsInput(requestData) {
 
 function buildTravelDetailsInstructions() {
   return [
-    "You create detailed travel plans for the WHERE TO GO app.",
-    "Return JSON only.",
-    "Do not return markdown.",
-    "Do not return code fences.",
-    "Do not return any explanation outside the JSON object.",
-    "Do not use the Korean words 異붿쿇, 理쒖쟻, 踰좎뒪?? 1?쒖쐞.",
-    "All visible text must be concise Korean except Day titles.",
-    "Generate one plan per selected option.",
-    "plans length must exactly match selectedOptions length.",
-    "Estimate itinerary day count from duration. For example, 3諛?4??means 4 days, 4諛?5??means 5 days.",
-    "Generate itinerary day count to match the duration value.",
-    "Each itinerary day must include 4 to 7 schedule items when possible.",
-    "Each schedule item must include time, place, activity, and move.",
-    "The first day should start with arrival or check-in if natural.",
-    "The final day should include checkout or return movement if natural.",
-    "Avoid unrealistic long-distance movement in a short time.",
-    "Reflect companions, budget, themes, and notes.",
+    "WHERE TO GO 앱의 상세 일정을 생성하세요.",
+    "JSON만 반환하세요.",
+    "마크다운은 쓰지 마세요.",
+    "코드블록은 쓰지 마세요.",
+    "JSON 객체 밖의 설명은 쓰지 마세요.",
+    "모든 보이는 문구는 간단한 한국어로 작성하세요. Day 제목만 예외입니다.",
+    "선택된 옵션 수만큼 계획을 생성하세요.",
+    "plans 길이는 selectedOptions 길이와 정확히 같아야 합니다.",
+    "duration을 기준으로 일정 일수를 계산하세요. 예: 3박 4일은 4일, 4박 5일은 5일입니다.",
+    "계산한 날짜 수에 맞는 itinerary를 생성하세요.",
+    "각 날짜에는 가능한 경우 4개에서 7개 정도의 일정 항목을 넣으세요.",
+    "각 일정 항목에는 time, place, activity, move를 포함하세요.",
+    "첫날은 자연스럽다면 도착이나 체크인부터 시작하세요.",
+    "마지막 날은 자연스럽다면 체크아웃이나 귀국 이동을 포함하세요.",
+    "짧은 일정에 맞지 않는 과도한 장거리 이동은 피하세요.",
+    "companions, budget, themes, notes를 반영하세요.",
     "Output shape:",
     '{"plans":[{"optionId":"option-a","label":"A","country":"","city":"","duration":"","travelDate":"","weather":{"summary":"","temperature":"","rainLevel":"","outfitNote":""},"itinerary":[{"day":1,"title":"Day 1","schedule":[{"time":"09:00","place":"","activity":"","move":""}]}]}]}'
   ].join("\n");
@@ -1293,16 +1290,15 @@ function buildTravelDetailsInput(requestData) {
 
 function buildTravelReviseInstructions() {
   return [
-    "You revise existing travel plans for the WHERE TO GO app.",
-    "Return JSON only.",
-    "Do not return markdown.",
-    "Do not return code fences.",
-    "Do not return any explanation outside the JSON object.",
-    "Do not use the Korean words 異붿쿇, 理쒖쟻, 踰좎뒪?? 1?쒖쐞.",
-    "Keep the original structure.",
-    "Preserve unrelated information as much as possible.",
-    "Apply the user's revision text only where needed.",
-    "All visible text must stay concise Korean except Day titles.",
+    "WHERE TO GO 앱의 기존 여행 일정을 수정하세요.",
+    "JSON만 반환하세요.",
+    "마크다운은 쓰지 마세요.",
+    "코드블록은 쓰지 마세요.",
+    "JSON 객체 밖의 설명은 쓰지 마세요.",
+    "기존 구조를 유지하세요.",
+    "무관한 정보는 가능한 한 그대로 두세요.",
+    "사용자 수정 요청은 필요한 부분에만 반영하세요.",
+    "보이는 모든 문구는 Day 제목을 제외하고 간단한 한국어로 유지하세요.",
     "Output shape:",
     '{"plans":[{"optionId":"","label":"","country":"","city":"","duration":"","travelDate":"","weather":{"summary":"","temperature":"","rainLevel":"","outfitNote":""},"itinerary":[]}],"revisionSummary":""}'
   ].join("\n");
@@ -1868,7 +1864,7 @@ const directAiTravelService = {
       const normalizedResult = normalizeOptionsResult({
         options: normalizeArray(directResult.data?.options),
         source: "ai-direct",
-        sourceLabel: `${CONFIG.AI_PROVIDERS[directResult.provider].label} AI 夷?${directResult.model}`
+      sourceLabel: `${CONFIG.AI_PROVIDERS[directResult.provider].label} AI 직접 · ${directResult.model}`
       }, requestData);
 
       if (normalizedResult.options.length === 3) {
@@ -1994,7 +1990,7 @@ const apiTravelService = {
     }, payload);
 
     if (normalizedResult.options.length !== 3) {
-      throw new Error("鈺곌퀗援??筌띿쉶????????겸뫖???筌띾슢諭억쭪? 筌륁궢六??щ빍?? ??쇰뻻 ??뺣즲??雅뚯눘苑??");
+      throw new Error("옵션 3개를 만들지 못했습니다. 다시 시도해 주세요.");
     }
 
     return normalizedResult;
@@ -2065,14 +2061,14 @@ async function generateTravelOptions() {
       };
     }
 
-    throw new Error("議곌굔??留욌뒗 AI ?듭뀡 3媛쒕? 留뚮뱾吏 紐삵뻽?듬땲?? ?낅젰 議곌굔??議곌툑 ?볧? ?ㅼ떆 ?쒕룄??二쇱꽭??");
+      throw new Error("조건에 맞는 AI 옵션 3개를 만들지 못했습니다. 입력 조건을 조금 바꿔 다시 시도해 주세요.");
   }
 
   const result = await callServerApi("/api/travel-options", payload);
   const validatedOptions = finalizeTravelOptions(result.options, payload, { allowFallback: false });
 
   if (validatedOptions.length !== 3) {
-    throw new Error("議곌굔??留욌뒗 ?듭뀡??異⑸텇??留뚮뱾吏 紐삵뻽?듬땲?? ?ㅼ떆 ?쒕룄??二쇱꽭??");
+    throw new Error("조건에 맞는 옵션을 만들지 못했습니다. 다시 시도해 주세요.");
   }
 
   return {

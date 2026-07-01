@@ -1,12 +1,12 @@
 :root {
-  --bg: #ffffff;
-  --surface: #ffffff;
-  --surface-soft: #fafafa;
-  --text: #111111;
-  --muted: #6b6b6b;
-  --line: #e7e7e7;
-  --line-strong: #111111;
-  --shadow: 0 10px 30px rgba(17, 17, 17, 0.04);
+  --bg: #f5eef8;
+  --surface: #fffdfd;
+  --surface-soft: #fbf6fb;
+  --text: #2e2736;
+  --muted: #7f778a;
+  --line: #e7dbea;
+  --line-strong: #c7b2dd;
+  --shadow: 0 18px 40px rgba(161, 132, 187, 0.16);
   --radius-xl: 28px;
   --radius-lg: 22px;
   --radius-md: 18px;
@@ -24,7 +24,10 @@ body {
 body {
   margin: 0;
   font-family: "Inter", "Noto Sans KR", sans-serif;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at top left, rgba(243, 220, 233, 0.8), transparent 34%),
+    radial-gradient(circle at top right, rgba(216, 227, 250, 0.85), transparent 30%),
+    linear-gradient(180deg, #f6eff8 0%, #fbf9fc 56%, #f2ecf6 100%);
   color: var(--text);
 }
 
@@ -41,11 +44,39 @@ button {
 .app-shell {
   min-height: 100vh;
   padding: 72px 16px 24px;
-  background: #ffffff;
+  background: transparent;
+  position: relative;
+  overflow: visible;
 }
 
 .ambient {
-  display: none;
+  display: block;
+  position: fixed;
+  z-index: 0;
+  border-radius: 999px;
+  filter: blur(4px);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.ambient-left {
+  top: 9vh;
+  left: -8vw;
+  width: 26vw;
+  height: 26vw;
+  max-width: 320px;
+  max-height: 320px;
+  background: radial-gradient(circle, rgba(249, 219, 230, 0.85) 0%, rgba(249, 219, 230, 0.18) 58%, transparent 72%);
+}
+
+.ambient-right {
+  right: -7vw;
+  bottom: 8vh;
+  width: 30vw;
+  height: 30vw;
+  max-width: 360px;
+  max-height: 360px;
+  background: radial-gradient(circle, rgba(218, 226, 250, 0.85) 0%, rgba(218, 226, 250, 0.16) 58%, transparent 72%);
 }
 
 #app {
@@ -59,9 +90,9 @@ button {
   left: 16px;
   z-index: 3;
   padding: 0.45rem 0.75rem;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(199, 178, 221, 0.7);
   border-radius: 999px;
-  background: #ffffff;
+  background: rgba(255, 252, 255, 0.84);
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -80,20 +111,20 @@ button {
   min-height: 44px;
   max-width: min(58vw, 320px);
   padding: 0.5rem 0.8rem;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(199, 178, 221, 0.72);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 252, 255, 0.82);
   color: var(--text);
   box-shadow: var(--shadow);
   text-align: left;
 }
 
 .ai-status-badge:hover {
-  border-color: var(--line-strong);
+  border-color: #cdbde0;
 }
 
 .ai-status-badge:focus-visible {
-  outline: 2px solid #111111;
+  outline: 2px solid #c8b2de;
   outline-offset: 2px;
 }
 
@@ -114,8 +145,8 @@ button {
 }
 
 .ai-status-badge.is-warning {
-  border-color: #d8c17a;
-  background: #fffaf0;
+  border-color: #e8d9a3;
+  background: rgba(255, 248, 228, 0.9);
 }
 
 .app-toast {
@@ -190,6 +221,7 @@ button {
   border-radius: var(--radius-xl);
   background: var(--surface);
   box-shadow: var(--shadow);
+  overflow: visible;
 }
 
 .screen-home {
@@ -301,7 +333,7 @@ h3 {
   padding: 0.9rem 1.15rem;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: #ffffff;
+  background: rgba(255, 253, 255, 0.92);
   color: var(--text);
   transition:
     background-color 0.18s ease,
@@ -315,7 +347,7 @@ h3 {
 .secondary-button:hover,
 .ghost-button:hover,
 .chip-button:hover {
-  border-color: var(--line-strong);
+  border-color: #cdbde0;
 }
 
 .primary-button,
@@ -323,9 +355,10 @@ h3 {
 .secondary-button.is-active,
 .ghost-button.is-active,
 .chip-button.is-active {
-  background: #111111;
-  border-color: #111111;
-  color: #ffffff;
+  background: linear-gradient(135deg, #e3d5f1 0%, #d6e4f7 100%);
+  border-color: #c5b5da;
+  color: #2f2740;
+  box-shadow: 0 12px 26px rgba(186, 166, 214, 0.22);
 }
 
 .primary-button.is-loading {
@@ -368,7 +401,7 @@ h3 {
 .selection-checkbox:focus-visible,
 .input:focus,
 .textarea:focus {
-  outline: 2px solid #111111;
+  outline: 2px solid #c8b2de;
   outline-offset: 2px;
 }
 
@@ -396,9 +429,9 @@ h3 {
 .input,
 .textarea {
   width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(231, 219, 234, 0.95);
   border-radius: var(--radius-md);
-  background: #ffffff;
+  background: rgba(255, 253, 255, 0.96);
   padding: 0.95rem 1rem;
   color: var(--text);
 }
@@ -430,7 +463,7 @@ h3 {
 .selection-toolbar {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: #ffffff;
+  background: rgba(255, 253, 255, 0.95);
 }
 
 .summary-card,
@@ -452,7 +485,7 @@ h3 {
 
 .status-card-loading {
   background:
-    linear-gradient(135deg, #ffffff 0%, #fafafa 55%, #f3f3f3 100%);
+    linear-gradient(135deg, #fffdfd 0%, #faf6fb 55%, #f1ecf7 100%);
   overflow: hidden;
 }
 
@@ -472,7 +505,7 @@ h3 {
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  background: #111111;
+  background: #8f7aa6;
   opacity: 0.22;
   animation: loadingPulse 1.2s ease-in-out infinite;
 }
@@ -521,9 +554,9 @@ h3 {
 
 .summary-item {
   padding: 14px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(231, 219, 234, 0.95);
   border-radius: 16px;
-  background: var(--surface-soft);
+  background: linear-gradient(180deg, rgba(249, 244, 251, 0.95), rgba(243, 242, 250, 0.95));
 }
 
 .summary-label {
@@ -566,6 +599,11 @@ h3 {
   grid-template-columns: 1fr;
 }
 
+.detail-grid {
+  align-items: start;
+  grid-auto-rows: minmax(min-content, auto);
+}
+
 .comparison-card {
   overflow: hidden;
 }
@@ -604,16 +642,25 @@ h3 {
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--text);
-  background: var(--surface-soft);
+  background: linear-gradient(180deg, rgba(250, 245, 251, 0.98), rgba(245, 242, 250, 0.98));
 }
 
 .comparison-table td {
   font-weight: 600;
 }
 
-.option-card,
-.detail-card {
+.option-card {
   overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.detail-card {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  align-self: start;
   overflow-wrap: anywhere;
   word-break: keep-all;
 }
@@ -629,7 +676,7 @@ h3 {
 
 .option-card.is-selected,
 .detail-card.is-selected {
-  border-color: #111111;
+  border-color: #c7b2dd;
 }
 
 .selection-state {
@@ -648,9 +695,9 @@ h3 {
 }
 
 .selection-state.is-selected {
-  border-color: #111111;
-  background: #111111;
-  color: #ffffff;
+  border-color: #c7b2dd;
+  background: linear-gradient(135deg, #e7dcf5 0%, #dbe7f8 100%);
+  color: #2f2740;
 }
 
 .option-badges {
@@ -779,6 +826,8 @@ h3 {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
+  overflow: visible;
+  break-inside: avoid;
 }
 
 .detail-day:first-of-type {
@@ -897,6 +946,8 @@ h3 {
 
   .detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    grid-auto-rows: minmax(min-content, auto);
   }
 
   .summary-grid {
