@@ -1,6 +1,6 @@
-const STORAGE_KEY = "where-to-go-app-state";
+﻿const STORAGE_KEY = "where-to-go-app-state";
 const AI_SETTINGS_STORAGE_KEY = "where-to-go-ai-settings";
-const APP_VERSION = "v1.33";
+const APP_VERSION = "v1.37.1";
 
 const CONFIG = {
   USE_MOCK: false,
@@ -20,25 +20,25 @@ const CONFIG = {
 };
 
 const COMPARISON_FIELDS = [
-  { key: "movement", label: "이동량" },
+  { key: "movement", label: "이동" },
   { key: "cost", label: "비용" },
   { key: "rest", label: "휴식" },
   { key: "shopping", label: "쇼핑" },
   { key: "activity", label: "액티비티" },
-  { key: "familyFriendly", label: "가족 친화" },
-  { key: "weatherFit", label: "계절 적합" }
+  { key: "familyFriendly", label: "가족" },
+  { key: "weatherFit", label: "날씨" }
 ];
 
 const THEME_OPTIONS = [
-  "휴양",
   "자연",
   "도시",
   "맛집",
-  "온천",
+  "휴양",
   "쇼핑",
-  "역사/문화",
+  "문화",
   "액티비티",
-  "가족여행"
+  "가족",
+  "야경"
 ];
 
 const MOCK_OPTIONS = [
@@ -46,35 +46,35 @@ const MOCK_OPTIONS = [
     id: "option-a",
     label: "A",
     country: "일본",
-    city: "후쿠오카",
-    theme: "가벼운 미식 산책",
-    pros: ["비행 시간이 짧아 부담이 적음", "맛집과 쇼핑 동선이 단순함", "짧은 일정에도 만족도가 높음"],
-    cons: ["도시 밀도가 높아 한적함은 적음", "주말 인기 지역은 붐빌 수 있음", "자연 중심 여행에는 다소 약함"],
+    city: "오사카",
+    theme: "맛집과 쇼핑",
+    pros: ["이동 시간이 짧음", "먹거리와 쇼핑이 풍부함", "일정 짜기가 쉬움"],
+    cons: ["주말엔 붐빌 수 있음", "가까워서 새로움은 적을 수 있음", "자연 중심 여행엔 덜 맞음"],
     comparison: {
-      movement: "낮음",
+      movement: "좋음",
       cost: "중간",
       rest: "중간",
-      shopping: "높음",
-      activity: "낮음",
-      familyFriendly: "중간",
-      weatherFit: "높음"
+      shopping: "좋음",
+      activity: "중간",
+      familyFriendly: "좋음",
+      weatherFit: "중간"
     }
   },
   {
     id: "option-b",
     label: "B",
-    country: "대만",
-    city: "타이베이",
-    theme: "야시장 중심 도시 여행",
-    pros: ["먹거리 선택지가 매우 다양함", "대중교통이 편해 이동이 쉬움", "도시와 근교를 함께 보기 좋음"],
-    cons: ["습도가 높게 느껴질 수 있음", "인기 야시장은 붐비는 편임", "리조트형 휴양과는 거리가 있음"],
+    country: "태국",
+    city: "방콕",
+    theme: "도시와 휴양",
+    pros: ["볼거리가 다양함", "가성비가 좋음", "여유 있게 쉬기 좋음"],
+    cons: ["이동 시간이 다소 김", "더운 날씨를 고려해야 함", "도시형 여행과 거리가 있을 수 있음"],
     comparison: {
       movement: "중간",
       cost: "중간",
       rest: "중간",
-      shopping: "높음",
+      shopping: "좋음",
       activity: "중간",
-      familyFriendly: "높음",
+      familyFriendly: "좋음",
       weatherFit: "중간"
     }
   },
@@ -83,47 +83,84 @@ const MOCK_OPTIONS = [
     label: "C",
     country: "베트남",
     city: "다낭",
-    theme: "리조트 위주 휴식 여행",
-    pros: ["쉬는 비중이 높아 회복감이 큼", "해변과 스파를 함께 즐기기 좋음", "가성비가 좋은 편임"],
-    cons: ["도시형 쇼핑 다양성은 적은 편", "우천 시 야외 일정 영향이 큼", "관광 포인트 밀도는 낮을 수 있음"],
+    theme: "자연과 휴양",
+    pros: ["느긋한 분위기가 좋음", "해변과 휴양이 강점", "가성비가 좋음"],
+    cons: ["날씨와 시즌 확인이 필요함", "도심형 쇼핑은 약할 수 있음", "이동 동선 계획이 필요함"],
     comparison: {
-      movement: "낮음",
-      cost: "낮음",
-      rest: "높음",
-      shopping: "낮음",
+      movement: "중간",
+      cost: "좋음",
+      rest: "좋음",
+      shopping: "중간",
       activity: "중간",
-      familyFriendly: "높음",
+      familyFriendly: "좋음",
       weatherFit: "중간"
     }
   }
 ];
 
 const REGION_COUNTRY_MAP = {
-  아시아: ["한국", "일본", "중국", "대만", "홍콩", "태국", "베트남", "싱가포르", "말레이시아", "인도네시아", "필리핀"],
-  동아시아: ["한국", "일본", "중국", "대만", "홍콩"],
-  동남아: ["태국", "베트남", "싱가포르", "말레이시아", "인도네시아", "필리핀"],
-  유럽: ["프랑스", "영국", "독일", "네덜란드", "벨기에", "스위스", "오스트리아", "이탈리아", "스페인", "포르투갈", "체코", "헝가리", "그리스", "크로아티아", "덴마크", "스웨덴", "노르웨이", "핀란드"],
-  서유럽: ["프랑스", "영국", "독일", "네덜란드", "벨기에", "스위스", "오스트리아"],
-  남유럽: ["이탈리아", "스페인", "포르투갈", "그리스", "크로아티아"],
-  북유럽: ["덴마크", "스웨덴", "노르웨이", "핀란드", "아이슬란드"],
-  동유럽: ["체코", "헝가리", "폴란드", "루마니아"],
-  미주: ["미국", "캐나다", "멕시코", "브라질", "아르헨티나", "페루", "칠레"],
-  북미: ["미국", "캐나다", "멕시코"],
-  남미: ["브라질", "아르헨티나", "페루", "칠레"],
+  아시아: ["일본", "태국", "베트남", "대만", "싱가포르", "말레이시아", "홍콩"],
+  동아시아: ["일본", "대만", "홍콩"],
+  동남아시아: ["태국", "베트남", "싱가포르", "말레이시아"],
+  유럽: ["이탈리아", "프랑스", "스페인", "영국", "독일", "스위스", "오스트리아"],
+  서유럽: ["프랑스", "영국", "독일", "스위스", "오스트리아"],
+  남유럽: ["이탈리아", "스페인", "포르투갈", "그리스"],
+  북유럽: ["노르웨이", "스웨덴", "덴마크", "핀란드"],
+  중동: ["터키", "아랍에미리트", "카타르"],
+  북미: ["미국", "캐나다"],
   오세아니아: ["호주", "뉴질랜드"],
-  중동: ["터키", "아랍에미리트", "카타르", "요르단"],
   아프리카: ["모로코", "이집트", "남아프리카공화국"]
 };
 
 const DESTINATION_LIBRARY = [
-  { country: "일본", city: "후쿠오카", theme: "가벼운 미식 산책", pros: ["비행 시간이 짧음", "맛집 밀도가 높음", "짧은 일정에 적합"], cons: ["한적함은 적음", "주말 붐빔 가능", "자연 비중은 낮음"], comparison: { movement: "낮음", cost: "중간", rest: "중간", shopping: "높음", activity: "낮음", familyFriendly: "중간", weatherFit: "높음" } },
-  { country: "대만", city: "타이베이", theme: "야시장 중심 도시 여행", pros: ["먹거리 선택지 다양", "대중교통 편리", "근교 이동 쉬움"], cons: ["습도가 높을 수 있음", "야시장 붐빔", "리조트형 휴양과 거리 있음"], comparison: { movement: "중간", cost: "중간", rest: "중간", shopping: "높음", activity: "중간", familyFriendly: "높음", weatherFit: "중간" } },
-  { country: "베트남", city: "다낭", theme: "리조트 위주 휴식", pros: ["휴식 비중이 높음", "해변과 스파 조합 좋음", "가성비가 좋음"], cons: ["쇼핑 다양성은 낮음", "우천 시 야외 영향", "도시 밀도는 낮음"], comparison: { movement: "낮음", cost: "낮음", rest: "높음", shopping: "낮음", activity: "중간", familyFriendly: "높음", weatherFit: "중간" } },
-  { country: "프랑스", city: "파리", theme: "미술관과 거리 산책", pros: ["명소 밀도가 높음", "도시 감도가 뚜렷함", "카페 문화가 풍부함"], cons: ["숙박비가 높은 편", "인기 구역 대기 발생", "도보 이동량이 늘 수 있음"], comparison: { movement: "중간", cost: "높음", rest: "중간", shopping: "높음", activity: "중간", familyFriendly: "중간", weatherFit: "높음" } },
-  { country: "스페인", city: "바르셀로나", theme: "건축 감상과 해변 여유", pros: ["도시와 바다를 함께 즐김", "산책 만족도가 높음", "식사 시간이 여유로움"], cons: ["성수기 혼잡", "소매치기 주의 필요", "낮 시간 햇빛이 강함"], comparison: { movement: "중간", cost: "중간", rest: "중간", shopping: "중간", activity: "중간", familyFriendly: "중간", weatherFit: "높음" } },
-  { country: "네덜란드", city: "암스테르담", theme: "운하 산책과 감성 일정", pros: ["도시 규모가 적당함", "동선이 단순함", "미술관 선택지가 좋음"], cons: ["숙박비가 오를 수 있음", "비 오는 날 변동성", "주말 인기 구역 붐빔"], comparison: { movement: "낮음", cost: "높음", rest: "중간", shopping: "중간", activity: "중간", familyFriendly: "중간", weatherFit: "중간" } },
-  { country: "이탈리아", city: "로마", theme: "유적과 골목 중심 일정", pros: ["역사 포인트가 많음", "식사 만족도가 높음", "걷는 재미가 큼"], cons: ["도보량이 많아질 수 있음", "성수기 혼잡", "숙소 위치 선택 중요"], comparison: { movement: "높음", cost: "중간", rest: "낮음", shopping: "중간", activity: "중간", familyFriendly: "중간", weatherFit: "높음" } },
-  { country: "영국", city: "런던", theme: "박물관과 쇼핑 균형", pros: ["실내 명소가 많음", "쇼핑 선택지 풍부", "지역별 개성이 뚜렷함"], cons: ["물가가 높음", "거리 이동이 길어질 수 있음", "날씨 변동이 잦음"], comparison: { movement: "중간", cost: "높음", rest: "중간", shopping: "높음", activity: "중간", familyFriendly: "높음", weatherFit: "중간" } }
+  {
+    country: "일본",
+    city: "오사카",
+    theme: "맛집과 쇼핑",
+    pros: ["이동이 편함", "먹거리와 쇼핑이 풍부함", "도심 이동이 쉬움"],
+    cons: ["주말엔 붐빌 수 있음", "익숙해서 새로움이 적을 수 있음", "자연 위주 여행과는 거리감이 있음"],
+    comparison: { movement: "좋음", cost: "중간", rest: "중간", shopping: "좋음", activity: "중간", familyFriendly: "좋음", weatherFit: "중간" }
+  },
+  {
+    country: "태국",
+    city: "방콕",
+    theme: "도시와 휴양",
+    pros: ["볼거리가 다양함", "가성비가 좋음", "여유 있게 쉬기 좋음"],
+    cons: ["더운 날씨를 고려해야 함", "이동 시간이 다소 김", "도시와 휴양을 함께 맞춰야 함"],
+    comparison: { movement: "중간", cost: "중간", rest: "중간", shopping: "좋음", activity: "중간", familyFriendly: "좋음", weatherFit: "중간" }
+  },
+  {
+    country: "베트남",
+    city: "다낭",
+    theme: "자연과 휴양",
+    pros: ["느긋한 분위기", "해변과 휴양에 강함", "가성비가 좋음"],
+    cons: ["날씨와 시즌 확인이 필요함", "쇼핑 중심 여행과는 다를 수 있음", "이동 동선 계획이 필요함"],
+    comparison: { movement: "중간", cost: "좋음", rest: "좋음", shopping: "중간", activity: "중간", familyFriendly: "좋음", weatherFit: "중간" }
+  },
+  {
+    country: "프랑스",
+    city: "파리",
+    theme: "도시 감상과 문화",
+    pros: ["볼거리가 많음", "미식과 문화가 풍부함", "여유 있는 여행에 적합함"],
+    cons: ["비용이 높을 수 있음", "이동 거리가 김", "숙소 위치 선정이 중요함"],
+    comparison: { movement: "중간", cost: "나쁨", rest: "중간", shopping: "좋음", activity: "중간", familyFriendly: "중간", weatherFit: "중간" }
+  },
+  {
+    country: "이탈리아",
+    city: "로마",
+    theme: "역사와 미식",
+    pros: ["유적과 문화가 풍부함", "식사가 만족스러움", "도시별 개성이 뚜렷함"],
+    cons: ["관광객이 많을 수 있음", "이동 시간이 필요함", "동선 설계가 중요함"],
+    comparison: { movement: "중간", cost: "중간", rest: "중간", shopping: "중간", activity: "중간", familyFriendly: "중간", weatherFit: "중간" }
+  },
+  {
+    country: "스페인",
+    city: "바르셀로나",
+    theme: "문화와 해변",
+    pros: ["도시와 바다를 함께 즐김", "야외 활동이 많음", "관광 포인트가 다양함"],
+    cons: ["성수기 혼잡", "소매치기 주의 필요", "일정이 빡빡할 수 있음"],
+    comparison: { movement: "중간", cost: "중간", rest: "중간", shopping: "중간", activity: "좋음", familyFriendly: "좋음", weatherFit: "중간" }
+  }
 ];
 
 const defaultAiSettings = {
@@ -161,6 +198,7 @@ const defaultState = {
 
 let aiSettings = loadAiSettings();
 let appState = loadState();
+let toastHideTimer = null;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -218,7 +256,7 @@ function parseJsonSafely(text) {
   const sourceText = normalizeString(text);
 
   if (!sourceText) {
-    throw new Error("AI 응답이 비어 있습니다.");
+    throw new Error("AI ?묐떟??鍮꾩뼱 ?덉뒿?덈떎.");
   }
 
   const codeBlockMatch = sourceText.match(/```json\s*([\s\S]*?)```|```\s*([\s\S]*?)```/i);
@@ -270,7 +308,7 @@ function parseJsonSafely(text) {
     }
   }
 
-  throw new Error("AI 응답을 JSON으로 해석하지 못했습니다.");
+  throw new Error("AI ?묐떟??JSON?쇰줈 ?댁꽍?섏? 紐삵뻽?듬땲??");
 }
 
 function safeJsonParse(text) {
@@ -345,7 +383,7 @@ function countryMatchesToken(country, token) {
 }
 
 function normalizeComparison(value = {}) {
-  const levels = ["낮음", "중간", "높음"];
+  const levels = ["좋음", "중간", "나쁨"];
 
   return Object.fromEntries(
     COMPARISON_FIELDS.map(({ key }) => {
@@ -554,6 +592,27 @@ function syncAiStatusBadge() {
   `;
 }
 
+function showAppToast(message, tone = "info") {
+  const toast = document.getElementById("appToast");
+  if (!toast) return;
+
+  if (toastHideTimer) {
+    window.clearTimeout(toastHideTimer);
+    toastHideTimer = null;
+  }
+
+  toast.className = `app-toast is-visible is-${tone}`;
+  toast.innerHTML = `
+    <span class="app-toast-dot" aria-hidden="true"></span>
+    <span class="app-toast-text">${escapeHtml(message)}</span>
+  `;
+
+  toastHideTimer = window.setTimeout(() => {
+    toast.className = "app-toast";
+    toast.innerHTML = "";
+  }, 2600);
+}
+
 function renderScreen(screenName, options = {}) {
   const { pushHistory = true } = options;
   const history = pushHistory ? [...appState.history, screenName] : [...appState.history];
@@ -631,7 +690,7 @@ function renderHomeMarkup() {
     <section class="panel screen-home">
       <div class="content">
         <h1>WHERE TO GO?</h1>
-        <p class="question">여행 기준을 골라주세요</p>
+        <p class="question">여행지를 정하는 첫 화면입니다.</p>
         <div class="actions">
           <button class="secondary-button" type="button" data-action="open-ai-settings">AI 설정</button>
           <button class="choice-button" type="button" data-action="choose-country" data-value="false">아직 정하지 않음</button>
@@ -645,7 +704,7 @@ function renderHomeMarkup() {
 function getAiModeLabel() {
   if (CONFIG.USE_MOCK) return "Mock";
   const activeAiSettings = getActiveAiSettings();
-  return activeAiSettings.apiKey ? CONFIG.AI_PROVIDERS[activeAiSettings.provider].label : "API 키 필요";
+  return activeAiSettings.apiKey ? CONFIG.AI_PROVIDERS[activeAiSettings.provider].label : "API Key 필요";
 }
 
 function getOptionSourceLabel() {
@@ -669,6 +728,7 @@ function renderAiSettingsMarkup() {
   const activeAiSettings = getActiveAiSettings();
   const provider = normalizeProviderName(activeAiSettings.provider);
   const model = activeAiSettings.model || getDefaultModelForProvider(provider);
+  const hasKey = Boolean(activeAiSettings.apiKey);
 
   return `
     <section class="panel screen-flow">
@@ -679,12 +739,12 @@ function renderAiSettingsMarkup() {
         </div>
         <div class="header-actions">
           <button class="ghost-button" type="button" data-action="back">뒤로</button>
-          <button class="secondary-button" type="button" data-action="home">홈</button>
+          <button class="secondary-button" type="button" data-action="home">처음으로</button>
         </div>
       </div>
 
       <section class="status-card">
-        <p>${getAiModeLabel()}</p>
+        <p>${hasKey ? `${CONFIG.AI_PROVIDERS[provider].label} 설정됨` : 'API Key 필요'}</p>
       </section>
 
       <form class="stack" id="ai-settings-form">
@@ -702,15 +762,15 @@ function renderAiSettingsMarkup() {
         </label>
 
         <label class="field">
-          <span class="label">API 키</span>
-          <input class="input" type="password" name="aiApiKey" value="" placeholder="새 키 입력" autocomplete="off" />
+          <span class="label">API Key</span>
+          <input class="input" type="password" name="aiApiKey" value="" placeholder="키 입력" autocomplete="off" />
         </label>
 
         <p class="screen-label">개인 테스트용입니다. 배포용 서비스에서는 서버 연동을 사용하세요.</p>
-        <p class="screen-label">API Key는 sessionStorage에만 저장되고 localStorage에는 저장하지 않습니다.</p>
+        <p class="screen-label">API Key는 sessionStorage에만 저장됩니다.</p>
 
         <section class="status-card">
-          <p>테스트용입니다. 운영 서비스 키는 넣지 마세요.</p>
+          <p>${hasKey ? '저장됨' : '미설정'}</p>
         </section>
 
         <div class="button-row">
@@ -723,12 +783,17 @@ function renderAiSettingsMarkup() {
 }
 
 function renderTravelFormMarkup(isDecided) {
+  const isOptionLoading = appState.isLoading && appState.loadingStep === "options";
+  const submitButtonMarkup = isOptionLoading
+    ? `<span class="button-loading-text">생성중</span><span class="button-loading-dots" aria-hidden="true"><span></span><span></span><span></span></span>`
+    : `옵션 보기`;
+
   return `
     <section class="panel screen-flow">
       <div class="screen-header">
         <div>
           <p class="kicker">${isDecided ? "FLOW B" : "FLOW A"}</p>
-          <h2>${isDecided ? "국가와 도시 입력" : "여행 조건 입력"}</h2>
+          <h2>${isDecided ? "국가·도시 입력" : "여행 조건 입력"}</h2>
         </div>
         <div class="header-actions">
           <button class="secondary-button" type="button" data-action="open-ai-settings">AI 설정</button>
@@ -737,7 +802,7 @@ function renderTravelFormMarkup(isDecided) {
         </div>
       </div>
 
-      ${renderStatusMarkup()}
+      ${isOptionLoading ? "" : renderStatusMarkup()}
 
       <form class="stack" id="travel-form">
         <div class="form-grid">
@@ -748,22 +813,22 @@ function renderTravelFormMarkup(isDecided) {
             </label>
             <label class="field">
               <span class="label">도시</span>
-              <input class="input" type="text" name="city" value="${escapeHtml(appState.city)}" placeholder="예: 후쿠오카" />
+              <input class="input" type="text" name="city" value="${escapeHtml(appState.city)}" placeholder="예: 오사카" />
             </label>
           ` : `
             <label class="field">
               <span class="label">선호 국가</span>
-              <input class="input" type="text" name="preferredCountries" value="${escapeHtml(appState.preferredCountries)}" placeholder="예: 일본, 대만" />
+              <input class="input" type="text" name="preferredCountries" value="${escapeHtml(appState.preferredCountries)}" placeholder="예: 아시아, 서유럽" />
             </label>
             <label class="field">
               <span class="label">제외 국가</span>
-              <input class="input" type="text" name="excludedCountries" value="${escapeHtml(appState.excludedCountries)}" placeholder="예: 미국" />
+              <input class="input" type="text" name="excludedCountries" value="${escapeHtml(appState.excludedCountries)}" placeholder="예: 미국, 아시아" />
             </label>
           `}
 
           <label class="field">
             <span class="label">테마</span>
-            <input class="input" type="text" name="themeSummary" value="${escapeHtml(appState.themes.join(", "))}" placeholder="아래 버튼으로 선택" disabled />
+            <input class="input" type="text" name="themeSummary" value="${escapeHtml(appState.themes.join(", "))}" placeholder="버튼으로 선택" disabled />
           </label>
 
           <label class="field">
@@ -772,7 +837,7 @@ function renderTravelFormMarkup(isDecided) {
           </label>
 
           <label class="field">
-            <span class="label">여행 기간</span>
+            <span class="label">기간</span>
             <input class="input" type="text" name="duration" value="${escapeHtml(appState.duration)}" placeholder="예: 3박 4일" />
           </label>
 
@@ -788,7 +853,7 @@ function renderTravelFormMarkup(isDecided) {
 
           <label class="field-wide">
             <span class="label">추가 요청</span>
-            <textarea class="textarea" name="notes" placeholder="원하는 분위기나 조건을 적어주세요">${escapeHtml(appState.notes)}</textarea>
+            <textarea class="textarea" name="notes" placeholder="원하는 분위기나 조건을 적어주세요.">${escapeHtml(appState.notes)}</textarea>
           </label>
 
           <div class="field-wide">
@@ -803,7 +868,7 @@ function renderTravelFormMarkup(isDecided) {
 
         <div class="screen-footer button-row">
           ${CONFIG.DEBUG_MODE ? `<button class="secondary-button" type="button" data-action="sample-input">샘플 입력</button>` : ""}
-          <button class="primary-button" type="submit">옵션 보기</button>
+          <button class="primary-button${isOptionLoading ? " is-loading" : ""}" type="submit" ${isOptionLoading ? "disabled" : ""}>${submitButtonMarkup}</button>
         </div>
       </form>
     </section>
@@ -839,8 +904,36 @@ function buildSummaryItems() {
   return items;
 }
 
+function getTravelFormDraft(form) {
+  const formData = new FormData(form);
+
+  return {
+    country: normalizeString(formData.get("country")),
+    city: normalizeString(formData.get("city")),
+    preferredCountries: normalizeString(formData.get("preferredCountries")),
+    excludedCountries: normalizeString(formData.get("excludedCountries")),
+    travelDate: normalizeString(formData.get("travelDate")),
+    duration: normalizeString(formData.get("duration")),
+    companions: normalizeString(formData.get("companions")),
+    budget: normalizeString(formData.get("budget")),
+    notes: normalizeString(formData.get("notes"))
+  };
+}
+
+function getRevisionFormDraft(form) {
+  const formData = new FormData(form);
+
+  return {
+    revisionRequest: normalizeString(formData.get("revisionText"))
+  };
+}
+
 function renderOptionsMarkup() {
   const options = appState.generatedOptions;
+  const isDetailsLoading = appState.isLoading && appState.loadingStep === "details";
+  const detailsButtonMarkup = isDetailsLoading
+    ? `<span class="button-loading-text">생성중</span><span class="button-loading-dots" aria-hidden="true"><span></span><span></span><span></span></span>`
+    : `상세 일정`;
 
   return `
     <section class="panel screen-flow">
@@ -880,7 +973,7 @@ function renderOptionsMarkup() {
       <section class="comparison-card">
         <div class="section-title">
           <h3>비교표</h3>
-          <p class="screen-label">추천이나 순위 없이 비교만 보여줍니다</p>
+          <p class="screen-label">추천이나 순위 없이 비교만 보여줍니다.</p>
         </div>
         <div class="comparison-table-wrap">
           <table class="comparison-table">
@@ -904,7 +997,7 @@ function renderOptionsMarkup() {
 
       <div class="button-row">
         <button class="secondary-button" type="button" data-action="refresh-options">다시 보기</button>
-        <button class="primary-button" type="button" data-action="build-details">상세 일정</button>
+        <button class="primary-button${isDetailsLoading ? " is-loading" : ""}" type="button" data-action="build-details" ${isDetailsLoading ? "disabled" : ""}>${detailsButtonMarkup}</button>
       </div>
     </section>
   `;
@@ -975,10 +1068,10 @@ function renderDetailsMarkup() {
       <section class="revision-card">
         <div class="section-title">
           <h3>일정 수정</h3>
-          <p class="screen-label">짧게 요청해 주세요</p>
+          <p class="screen-label">짧게 적어 주세요.</p>
         </div>
         <form class="stack" id="revision-form">
-          <textarea class="textarea" name="revisionText" placeholder="예: 이동을 줄이고 맛집을 더 넣어줘">${escapeHtml(appState.revisionRequest)}</textarea>
+          <textarea class="textarea" name="revisionText" placeholder="더 쉬운 일정, 맛집 추가, 휴식 늘리기">${escapeHtml(appState.revisionRequest)}</textarea>
           <div class="button-row">
             <button class="secondary-button" type="button" data-action="clear-revision">초기화</button>
             <button class="primary-button" type="submit">수정 반영</button>
@@ -998,12 +1091,12 @@ function renderPlanCard(plan) {
           <h3>${escapeHtml(plan.country)} · ${escapeHtml(plan.city)}</h3>
         </div>
         <div class="option-badges">
-          <span class="validation-badge validation-valid">${escapeHtml(plan.duration || "일정")}</span>
+          <span class="validation-badge validation-valid">${escapeHtml(plan.duration || "미정")}</span>
         </div>
       </div>
 
       <div class="detail-meta">
-        <span class="meta-pill">${escapeHtml(plan.travelDate || "시기 미입력")}</span>
+        <span class="meta-pill">${escapeHtml(plan.travelDate || "시기 미정")}</span>
       </div>
 
       <div class="weather-info">
@@ -1016,11 +1109,11 @@ function renderPlanCard(plan) {
           <span class="weather-value">${escapeHtml(plan.weather.temperature || "-")}</span>
         </div>
         <div class="weather-item">
-          <span class="weather-label">비 확률</span>
+          <span class="weather-label">강수</span>
           <span class="weather-value">${escapeHtml(plan.weather.rainLevel || "-")}</span>
         </div>
         <div class="weather-item">
-          <span class="weather-label">옷차림</span>
+          <span class="weather-label">복장</span>
           <span class="weather-value">${escapeHtml(plan.weather.outfitNote || "-")}</span>
         </div>
       </div>
@@ -1133,7 +1226,7 @@ function buildTravelOptionsInstructions(extraInstruction = "") {
     "Do not return markdown.",
     "Do not return code fences.",
     "Do not return any explanation outside the JSON object.",
-    "Do not use the Korean words 추천, 최적, 베스트, 1순위.",
+    "Do not use the Korean words 異붿쿇, 理쒖쟻, 踰좎뒪?? 1?쒖쐞.",
     "Do not use recommendation language, ranking language, best, top, or winner.",
     "Generate exactly 3 options.",
     "The options array length must be exactly 3.",
@@ -1143,20 +1236,20 @@ function buildTravelOptionsInstructions(extraInstruction = "") {
     "If hasCountry is false, propose 3 different country and city combinations.",
     "If hasCountry is true, keep all options inside the user's country.",
     "If city exists, keep all options centered on that city but make their concepts clearly different.",
-    "preferredCountries and excludedCountries may include region names such as 서유럽, 남유럽, 북유럽, 동유럽, 유럽, 아시아, 동남아, 북미.",
+    "preferredCountries and excludedCountries may include region names such as ?쒖쑀?? ?⑥쑀?? 遺곸쑀?? ?숈쑀?? ?좊읇, ?꾩떆?? ?숇궓?? 遺곷?.",
     "Treat those region names as country groups and respect them strictly.",
     "Do not return a country that belongs to excludedCountries.",
     "If preferredCountries is provided, prioritize countries that belong to preferredCountries.",
     "Reflect themes, travelDate, duration, companions, budget, and notes.",
-    "Avoid generic filler like 최신 트렌드, 다양한 쇼핑몰, 인파, 비싼 가격 unless it is truly specific and useful.",
+    "Avoid generic filler like 理쒖떊 ?몃젋?? ?ㅼ뼇???쇳븨紐? ?명뙆, 鍮꾩떬 媛寃?unless it is truly specific and useful.",
     "Make each pros and cons item concrete and city-specific when possible.",
     "Do not reuse the same vague pros and cons across multiple options.",
     "Each option must include pros and cons as concise Korean arrays.",
     "comparison must include movement, cost, rest, shopping, activity, familyFriendly, weatherFit.",
-    "Each comparison value must be one of 낮음, 중간, 높음.",
+    "Each comparison value must be one of 좋음, 중간, 나쁨.",
     extraInstruction,
     "Output shape:",
-    '{"options":[{"id":"option-a","label":"A","country":"","city":"","theme":"","pros":[],"cons":[],"comparison":{"movement":"낮음","cost":"중간","rest":"높음","shopping":"중간","activity":"낮음","familyFriendly":"중간","weatherFit":"높음"}}]}'
+    '{"options":[{"id":"option-a","label":"A","country":"","city":"","theme":"","pros":[],"cons":[],"comparison":{"movement":"좋음","cost":"중간","rest":"나쁨","shopping":"중간","activity":"좋음","familyFriendly":"중간","weatherFit":"나쁨"}}]}'
   ].filter(Boolean).join("\n");
 }
 
@@ -1174,11 +1267,11 @@ function buildTravelDetailsInstructions() {
     "Do not return markdown.",
     "Do not return code fences.",
     "Do not return any explanation outside the JSON object.",
-    "Do not use the Korean words 추천, 최적, 베스트, 1순위.",
+    "Do not use the Korean words 異붿쿇, 理쒖쟻, 踰좎뒪?? 1?쒖쐞.",
     "All visible text must be concise Korean except Day titles.",
     "Generate one plan per selected option.",
     "plans length must exactly match selectedOptions length.",
-    "Estimate itinerary day count from duration. For example, 3박 4일 means 4 days, 4박 5일 means 5 days.",
+    "Estimate itinerary day count from duration. For example, 3諛?4??means 4 days, 4諛?5??means 5 days.",
     "Generate itinerary day count to match the duration value.",
     "Each itinerary day must include 4 to 7 schedule items when possible.",
     "Each schedule item must include time, place, activity, and move.",
@@ -1205,7 +1298,7 @@ function buildTravelReviseInstructions() {
     "Do not return markdown.",
     "Do not return code fences.",
     "Do not return any explanation outside the JSON object.",
-    "Do not use the Korean words 추천, 최적, 베스트, 1순위.",
+    "Do not use the Korean words 異붿쿇, 理쒖쟻, 踰좎뒪?? 1?쒖쐞.",
     "Keep the original structure.",
     "Preserve unrelated information as much as possible.",
     "Apply the user's revision text only where needed.",
@@ -1318,8 +1411,8 @@ async function callGeminiDirect({ apiKey, model, instructions, input }) {
   debugLog("Gemini direct request", {
     provider: "gemini",
     model: safeModel,
-    url: endpoint.replace(encodeURIComponent(safeApiKey), "***"),
-    apiKey: safeApiKey,
+    url: endpoint,
+    apiKey: "***",
     body: requestBody
   });
 
@@ -1366,8 +1459,11 @@ async function callGroqDirect({ apiKey, model, instructions, input }) {
     provider: "groq",
     model: safeModel,
     url: endpoint,
-    apiKey: safeApiKey,
-    headers: requestHeaders,
+    apiKey: "***",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer ***"
+    },
     body: requestBody
   });
 
@@ -1396,7 +1492,7 @@ async function callDirectProvider(provider, requestType, requestPayload, request
   const model = normalizeString(activeAiSettings.model) || getDefaultModelForProvider(provider);
 
   if (!apiKey) {
-    throw new Error("API 키 확인이 필요합니다.");
+    throw new Error("API ???뺤씤???꾩슂?⑸땲??");
   }
 
   let instructions = "";
@@ -1475,7 +1571,7 @@ async function callDirectProvider(provider, requestType, requestPayload, request
       responseJson?.error?.message ||
       responseJson?.message ||
       responseJson?.rawText ||
-      "AI 요청에 실패했습니다."
+      "AI ?붿껌???ㅽ뙣?덉뒿?덈떎."
     );
   }
 
@@ -1506,7 +1602,7 @@ async function callServerApi(path, payload) {
   const responseJson = await readJsonResponse(response);
 
   if (!response.ok || responseJson?.success === false) {
-    throw new Error(responseJson?.error || responseJson?.message || "서버 요청에 실패했습니다.");
+    throw new Error(responseJson?.error || responseJson?.message || "?쒕쾭 ?붿껌???ㅽ뙣?덉뒿?덈떎.");
   }
 
   return responseJson.data || responseJson;
@@ -1519,9 +1615,9 @@ function createMockDetailsFromOptions(options) {
     country: option.country,
     city: option.city,
     duration: appState.duration || "3박 4일",
-    travelDate: appState.travelDate || "가을 추천",
+    travelDate: appState.travelDate || "미정",
     weather: {
-      summary: "이동하기 무난한 시즌",
+      summary: "여행하기 무난한 날씨",
       temperature: "18~25도",
       rainLevel: "보통",
       outfitNote: "가벼운 겉옷 추천"
@@ -1531,20 +1627,20 @@ function createMockDetailsFromOptions(options) {
         day: 1,
         title: "Day 1",
         schedule: [
-          { time: "10:00", place: `${option.city} 공항`, activity: "도착 후 이동", move: "공항철도 또는 택시" },
-          { time: "12:30", place: "숙소 주변", activity: "점심과 체크인", move: "도보" },
-          { time: "15:00", place: "핵심 지역", activity: "첫 산책", move: "도보 또는 지하철" },
-          { time: "19:00", place: "대표 맛집 거리", activity: "저녁 식사", move: "대중교통" }
+          { time: "10:00", place: `${option.city} 공항`, activity: "도착 및 이동", move: "공항에서 숙소로 이동" },
+          { time: "12:30", place: "현지 식당", activity: "점심 식사", move: "도보" },
+          { time: "15:00", place: "도심 명소", activity: "첫 일정", move: "대중교통" },
+          { time: "19:00", place: "저녁 식사 거리", activity: "저녁 식사", move: "도보" }
         ]
       },
       {
         day: 2,
         title: "Day 2",
         schedule: [
-          { time: "09:00", place: "브런치 카페", activity: "여유 있는 시작", move: "도보" },
-          { time: "11:00", place: "대표 명소", activity: `${option.theme} 중심 코스`, move: "대중교통" },
-          { time: "15:00", place: "로컬 스팟", activity: "취향 맞춤 일정", move: "도보" },
-          { time: "18:30", place: "저녁 거리", activity: "야간 분위기 즐기기", move: "도보" }
+          { time: "09:00", place: "카페", activity: "아침 시작", move: "도보" },
+          { time: "11:00", place: "주요 명소", activity: `${option.theme} 중심 코스`, move: "대중교통" },
+          { time: "15:00", place: "휴식 공간", activity: "휴식", move: "도보" },
+          { time: "18:30", place: "야경 포인트", activity: "저녁 산책", move: "도보" }
         ]
       }
     ]
@@ -1693,7 +1789,7 @@ async function callDirectAI({ instructions, input }) {
   const model = normalizeString(activeAiSettings.model) || getDefaultModelForProvider(provider);
 
   if (!apiKey) {
-    throw new Error("API Key 확인 필요");
+    throw new Error("API Key ?뺤씤 ?꾩슂");
   }
 
   let result;
@@ -1713,7 +1809,7 @@ async function callDirectAI({ instructions, input }) {
       input
     });
   } else {
-    throw new Error("AI provider 설정 확인 필요");
+    throw new Error("AI provider ?ㅼ젙 ?뺤씤 ?꾩슂");
   }
 
   return {
@@ -1742,7 +1838,7 @@ const mockTravelService = {
   async revisePlans() {
     return normalizePlansResult({
       plans: appState.detailedPlans,
-      revisionSummary: "Mock 모드에서는 원본 일정을 유지합니다."
+      revisionSummary: "Mock 紐⑤뱶?먯꽌???먮낯 ?쇱젙???좎??⑸땲??"
     });
   }
 };
@@ -1772,33 +1868,25 @@ const directAiTravelService = {
       const normalizedResult = normalizeOptionsResult({
         options: normalizeArray(directResult.data?.options),
         source: "ai-direct",
-        sourceLabel: `${CONFIG.AI_PROVIDERS[directResult.provider].label} AI 쨌 ${directResult.model}`
+        sourceLabel: `${CONFIG.AI_PROVIDERS[directResult.provider].label} AI 夷?${directResult.model}`
       }, requestData);
 
-      if (normalizedResult.options.length >= 3 || optionSetIndex > 0) {
-        return {
-          ...normalizedResult,
-          options: normalizedResult.options.length
-            ? normalizedResult.options
-            : finalizeTravelOptions([], requestData)
-        };
+      if (normalizedResult.options.length === 3) {
+        return normalizedResult;
       }
 
-      return this.getOptions(1);
+      if (optionSetIndex === 0) {
+        return this.getOptions(1);
+      }
+
+      throw new Error("?듭뀡 ?앹꽦???ㅽ뙣?덉뒿?덈떎.");
     } catch (error) {
-      debugLog("Direct AI options fallback", {
+      debugLog("Direct AI options error", {
         optionSetIndex,
         message: error?.message || "unknown error",
         requestData
       });
-
-      const fallbackOptions = finalizeTravelOptions([], requestData);
-
-      return {
-        options: fallbackOptions,
-        source: "fallback",
-        sourceLabel: "Fallback"
-      };
+      throw new Error("?듭뀡 ?앹꽦???ㅽ뙣?덉뒿?덈떎.");
     }
   },
   async getDetails() {
@@ -1906,7 +1994,7 @@ const apiTravelService = {
     }, payload);
 
     if (normalizedResult.options.length !== 3) {
-      throw new Error("議곌굔??留욌뒗 ?듭뀡??異⑸텇??留뚮뱾吏 紐삵뻽?듬땲?? ?ㅼ떆 ?쒕룄??二쇱꽭??");
+      throw new Error("鈺곌퀗援??筌띿쉶????????겸뫖???筌띾슢諭억쭪? 筌륁궢六??щ빍?? ??쇰뻻 ??뺣즲??雅뚯눘苑??");
     }
 
     return normalizedResult;
@@ -1955,7 +2043,7 @@ async function generateTravelOptions() {
       return {
         options: firstPassOptions,
         source: "ai-direct",
-        sourceLabel: `${CONFIG.AI_PROVIDERS[firstResult.provider].label} AI · ${firstResult.model}`
+        sourceLabel: `${CONFIG.AI_PROVIDERS[firstResult.provider].label} AI 쨌 ${firstResult.model}`
       };
     }
 
@@ -1973,18 +2061,18 @@ async function generateTravelOptions() {
       return {
         options: retryOptions,
         source: "ai-direct",
-        sourceLabel: `${CONFIG.AI_PROVIDERS[retryResult.provider].label} AI · ${retryResult.model}`
+        sourceLabel: `${CONFIG.AI_PROVIDERS[retryResult.provider].label} AI 쨌 ${retryResult.model}`
       };
     }
 
-    throw new Error("조건에 맞는 AI 옵션 3개를 만들지 못했습니다. 입력 조건을 조금 넓혀 다시 시도해 주세요.");
+    throw new Error("議곌굔??留욌뒗 AI ?듭뀡 3媛쒕? 留뚮뱾吏 紐삵뻽?듬땲?? ?낅젰 議곌굔??議곌툑 ?볧? ?ㅼ떆 ?쒕룄??二쇱꽭??");
   }
 
   const result = await callServerApi("/api/travel-options", payload);
   const validatedOptions = finalizeTravelOptions(result.options, payload, { allowFallback: false });
 
   if (validatedOptions.length !== 3) {
-    throw new Error("조건에 맞는 옵션을 충분히 만들지 못했습니다. 다시 시도해 주세요.");
+    throw new Error("議곌굔??留욌뒗 ?듭뀡??異⑸텇??留뚮뱾吏 紐삵뻽?듬땲?? ?ㅼ떆 ?쒕룄??二쇱꽭??");
   }
 
   return {
@@ -2014,46 +2102,31 @@ async function generateTravelDetails() {
 async function reviseTravelDetails(revisionText) {
   updateState({ revisionRequest: revisionText });
   return getTravelService().revisePlans();
-  const payload = buildRevisionRequest(revisionText);
-
-  if (CONFIG.USE_MOCK) {
-    return {
-      plans: appState.detailedPlans,
-      revisionSummary: "Mock 모드에서는 원본 일정을 유지합니다."
-    };
-  }
-
-  if (CONFIG.DIRECT_AI_MODE) {
-    const result = await callDirectProvider(getActiveAiSettings().provider, "revise", payload);
-    return result.parsed;
-  }
-
-  return callServerApi("/api/travel-revise", payload);
 }
 
 function applySampleInput() {
   updateState(appState.hasCountry ? {
     country: "일본",
-    city: "후쿠오카",
+    city: "오사카",
     preferredCountries: "",
     excludedCountries: "",
     travelDate: "10월",
     duration: "3박 4일",
     companions: "친구 2명",
     budget: "150만원",
-    notes: "맛집과 산책 위주, 무리한 이동은 적게",
+    notes: "맛집과 쇼핑 중심, 대중교통 편하게",
     themes: ["도시", "맛집"]
   } : {
     country: "",
     city: "",
-    preferredCountries: "일본, 대만",
+    preferredCountries: "아시아, 서유럽",
     excludedCountries: "미국",
     travelDate: "10월",
     duration: "3박 4일",
     companions: "친구 2명",
     budget: "150만원",
-    notes: "맛집과 산책 위주, 숙소 이동은 단순하게",
-    themes: ["도시", "맛집"]
+    notes: "맛집과 쇼핑 중심, 휴양도 함께",
+    themes: ["도시", "휴양"]
   });
 }
 
@@ -2088,12 +2161,20 @@ async function handleTravelFormSubmit(form) {
       detailedPlans: [],
       errorMessage: ""
     });
+    showAppToast("옵션 생성 완료", "success");
     renderScreen("options");
   } catch (error) {
     updateState({
       isLoading: false,
-      errorMessage: error.message || "옵션 생성에 실패했습니다."
+      loadingStep: "",
+      generatedOptions: [],
+      optionSource: "",
+      optionSourceLabel: "",
+      selectedOptions: [],
+      detailedPlans: [],
+      errorMessage: "옵션 생성에 실패했습니다."
     });
+    showAppToast("옵션 생성에 실패했습니다.", "error");
     renderScreen(appState.hasCountry ? "decided-form" : "undecided-form", { pushHistory: false });
   }
 }
@@ -2109,12 +2190,17 @@ async function handleBuildDetails() {
       detailedPlans: normalizeArray(result.plans).map(normalizePlan),
       revisionSummary: ""
     });
+    showAppToast("상세 일정 생성 완료", "success");
     renderScreen("details");
   } catch (error) {
     updateState({
       isLoading: false,
-      errorMessage: error.message || "상세 일정 생성에 실패했습니다."
+      loadingStep: "",
+      detailedPlans: [],
+      revisionSummary: "",
+      errorMessage: "상세 일정 생성에 실패했습니다."
     });
+    showAppToast("상세 일정 생성에 실패했습니다.", "error");
     renderScreen("options", { pushHistory: false });
   }
 }
@@ -2140,14 +2226,16 @@ async function handleRevisionSubmit(form) {
     updateState({
       isLoading: false,
       detailedPlans: normalizeArray(result.plans).map(normalizePlan),
-      revisionSummary: normalizeString(result.revisionSummary) || "일정 수정이 반영되었습니다."
+      revisionSummary: normalizeString(result.revisionSummary) || "수정 내용을 반영했습니다."
     });
+    showAppToast("수정 완료", "success");
     renderScreen("details", { pushHistory: false });
   } catch (error) {
     updateState({
       isLoading: false,
-      errorMessage: error.message || "일정 수정에 실패했습니다."
+      errorMessage: error.message || "수정 요청 처리에 실패했습니다."
     });
+    showAppToast("수정 요청 처리에 실패했습니다.", "error");
     renderScreen("details", { pushHistory: false });
   }
 }
@@ -2163,6 +2251,13 @@ function bindScreenEvents(screenName) {
     const action = actionElement.dataset.action;
 
     if (action === "open-ai-settings") {
+      const form = actionElement.closest("form");
+      if (form && (screenName === "decided-form" || screenName === "undecided-form")) {
+        updateState(getTravelFormDraft(form));
+      }
+      if (form && screenName === "details") {
+        updateState(getRevisionFormDraft(form));
+      }
       renderScreen("ai-settings");
       return;
     }
@@ -2176,10 +2271,15 @@ function bindScreenEvents(screenName) {
 
     if (action === "toggle-theme") {
       const theme = actionElement.dataset.theme;
+      const form = actionElement.closest("form");
+      const draft = form ? getTravelFormDraft(form) : {};
       const themes = appState.themes.includes(theme)
         ? appState.themes.filter((item) => item !== theme)
         : [...appState.themes, theme];
-      updateState({ themes });
+      updateState({
+        ...draft,
+        themes
+      });
       renderScreen(screenName, { pushHistory: false });
       return;
     }
@@ -2242,7 +2342,13 @@ function bindScreenEvents(screenName) {
       } catch (error) {
         updateState({
           isLoading: false,
-          errorMessage: error.message || "옵션 재생성에 실패했습니다."
+          loadingStep: "",
+          generatedOptions: [],
+          optionSource: "",
+          optionSourceLabel: "",
+          selectedOptions: [],
+          detailedPlans: [],
+          errorMessage: "옵션 생성에 실패했습니다."
         });
         renderScreen("options", { pushHistory: false });
       }
@@ -2275,11 +2381,25 @@ function bindScreenEvents(screenName) {
     }
 
     if (action === "back") {
+      const form = actionElement.closest("form");
+      if (form && (screenName === "decided-form" || screenName === "undecided-form")) {
+        updateState(getTravelFormDraft(form));
+      }
+      if (form && screenName === "details") {
+        updateState(getRevisionFormDraft(form));
+      }
       goBack();
       return;
     }
 
     if (action === "home") {
+      const form = actionElement.closest("form");
+      if (form && (screenName === "decided-form" || screenName === "undecided-form")) {
+        updateState(getTravelFormDraft(form));
+      }
+      if (form && screenName === "details") {
+        updateState(getRevisionFormDraft(form));
+      }
       goHome();
     }
   };
@@ -2314,29 +2434,6 @@ function bindScreenEvents(screenName) {
 }
 
 function renderStatusMarkup() {
-  if (appState.isLoading) {
-    const title = appState.loadingStep === "details" ? "상세 일정 생성 중" : "옵션 생성 중";
-    const copy = appState.loadingStep === "details"
-      ? "동선을 맞추고 일정을 정리하고 있어요"
-      : "조건을 비교해서 A부터 C까지 준비하고 있어요";
-
-    return `
-      <section class="status-card status-card-loading" aria-live="polite">
-        <div class="loading-status">
-          <div class="loading-dots" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <div class="loading-copy">
-            <p class="loading-title">${escapeHtml(title)}</p>
-            <p class="loading-text">${escapeHtml(copy)}</p>
-          </div>
-        </div>
-      </section>
-    `;
-  }
-
   if (appState.errorMessage) {
     return `<section class="status-card"><p>${escapeHtml(appState.errorMessage)}</p></section>`;
   }
@@ -2358,3 +2455,6 @@ if (aiStatusBadgeElement) {
 syncVersionBadge();
 syncAiStatusBadge();
 renderScreen(appState.currentScreen || "home", { pushHistory: false });
+
+
+
