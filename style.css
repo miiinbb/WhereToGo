@@ -369,6 +369,11 @@ h3 {
   cursor: wait;
 }
 
+.secondary-button.is-loading {
+  gap: 10px;
+  cursor: wait;
+}
+
 .button-loading-text {
   font-weight: 600;
 }
