@@ -1,6 +1,6 @@
 ﻿const STORAGE_KEY = "where-to-go-app-state";
 const AI_SETTINGS_STORAGE_KEY = "where-to-go-ai-settings";
-const APP_VERSION = "v1.40.4";
+const APP_VERSION = "v1.41.3";
 
 const CONFIG = {
   USE_MOCK: false,
@@ -1091,6 +1091,8 @@ function renderOptionCard(option) {
 }
 
 function renderDetailsMarkup() {
+  const hasDownloadablePlans = hasDetailedPlansForExport();
+
   return `
     <section class="panel screen-flow">
       <div class="screen-header">
@@ -1099,6 +1101,8 @@ function renderDetailsMarkup() {
           <h2>상세 일정</h2>
         </div>
         <div class="header-actions">
+          <button class="secondary-button" type="button" data-action="download-docx" ${hasDownloadablePlans ? "" : "disabled"}>DOCX 다운로드</button>
+          <button class="secondary-button" type="button" data-action="download-pdf" ${hasDownloadablePlans ? "" : "disabled"}>PDF 다운로드</button>
           <button class="ghost-button" type="button" data-action="back">뒤로가기</button>
           <button class="secondary-button" type="button" data-action="home">처음으로</button>
         </div>
@@ -1131,6 +1135,39 @@ function renderDetailsMarkup() {
       </section>
     </section>
   `;
+}
+
+async function handleDetailedPlansDownload(format, buttonElement) {
+  const plans = getDetailedPlansForExport();
+  if (!plans.length) {
+    showAppToast("문서 생성에 실패했습니다.", "error");
+    return false;
+  }
+
+  setExportButtonLoading(buttonElement, true, "다운로드 중");
+
+  try {
+    if (format === "docx") {
+      const blob = await createDetailedPlansDocxBlob(plans);
+      downloadBlobFile(blob, getDetailedPlansDocxFilename());
+      showAppToast("다운로드가 완료되었습니다.", "success");
+      return true;
+    }
+
+    if (format === "pdf") {
+      const blob = await createDetailedPlansPdfBlob(plans);
+      downloadBlobFile(blob, getDetailedPlansPdfFilename());
+      showAppToast("다운로드가 완료되었습니다.", "success");
+      return true;
+    }
+
+    throw new Error("지원하지 않는 다운로드 형식입니다.");
+  } catch (error) {
+    showAppToast("문서 생성에 실패했습니다.", "error");
+    return false;
+  } finally {
+    setExportButtonLoading(buttonElement, false);
+  }
 }
 
 function renderPlanCard(plan) {
@@ -1245,6 +1282,15 @@ function buildRevisionRequest(revisionText) {
     }
   };
 }
+
+function getDetailedPlansForExport() {
+  return normalizeArray(appState.detailedPlans).map(normalizePlan);
+}
+
+function hasDetailedPlansForExport() {
+  return getDetailedPlansForExport().length > 0;
+}
+
 
 function convertFrontendPlansToApiPlans(plans = []) {
   return normalizeArray(plans).map((plan, index) => {
@@ -2422,6 +2468,16 @@ function bindScreenEvents(screenName) {
 
     if (action === "build-details") {
       await handleBuildDetails();
+      return;
+    }
+
+    if (action === "download-docx") {
+      await handleDetailedPlansDownload("docx", actionElement);
+      return;
+    }
+
+    if (action === "download-pdf") {
+      await handleDetailedPlansDownload("pdf", actionElement);
       return;
     }
 
