@@ -596,14 +596,6 @@ function startLoading(step, errorMessage = "") {
   });
 }
 
-function stopLoading(errorMessage = "") {
-  updateState({
-    isLoading: false,
-    loadingStep: "",
-    errorMessage
-  });
-}
-
 function syncVersionBadge() {
   const versionBadge = document.getElementById("versionBadge");
   if (versionBadge) {
@@ -761,29 +753,6 @@ function renderHomeMarkup() {
   `;
 }
 
-function getAiModeLabel() {
-  if (CONFIG.USE_MOCK) return "Mock";
-  const activeAiSettings = getActiveAiSettings();
-  return activeAiSettings.apiKey ? CONFIG.AI_PROVIDERS[activeAiSettings.provider].label : "API Key 필요";
-}
-
-function getOptionSourceLabel() {
-  if (appState.optionSourceLabel) {
-    return appState.optionSourceLabel;
-  }
-
-  if (CONFIG.USE_MOCK) {
-    return "Mock";
-  }
-
-  const activeAiSettings = getActiveAiSettings();
-  if (activeAiSettings.apiKey) {
-    return `${CONFIG.AI_PROVIDERS[activeAiSettings.provider].label} AI`;
-  }
-
-  return "";
-}
-
 function renderAiSettingsMarkup() {
   const activeAiSettings = getActiveAiSettings();
   const provider = normalizeProviderName(activeAiSettings.provider);
@@ -855,14 +824,14 @@ function renderTravelFormMarkup(isDecided) {
           <p class="kicker">${isDecided ? "FLOW B" : "FLOW A"}</p>
           <h2>${isDecided ? "국가·도시 입력" : "여행 조건 입력"}</h2>
         </div>
-        <div class="header-actions">
-          <button class="secondary-button" type="button" data-action="open-ai-settings">AI 설정</button>
-          <button class="ghost-button" type="button" data-action="back">뒤로가기</button>
-          <button class="secondary-button" type="button" data-action="home">처음으로</button>
-        </div>
+      <div class="header-actions">
+        <button class="secondary-button" type="button" data-action="open-ai-settings">AI 설정</button>
+        <button class="ghost-button" type="button" data-action="back">뒤로가기</button>
+        <button class="secondary-button" type="button" data-action="home">처음으로</button>
+      </div>
       </div>
 
-      ${isOptionLoading ? "" : renderStatusMarkup()}
+      ${renderStatusMarkup()}
 
       <form class="stack" id="travel-form">
         <div class="form-grid">
@@ -933,18 +902,6 @@ function renderTravelFormMarkup(isDecided) {
       </form>
     </section>
   `;
-}
-
-function renderLegacyStatusMarkup() {
-  if (appState.isLoading) {
-    return `<section class="status-card"><p>AI 생성 중</p></section>`;
-  }
-
-  if (appState.errorMessage) {
-    return `<section class="status-card"><p>${escapeHtml(appState.errorMessage)}</p></section>`;
-  }
-
-  return "";
 }
 
 function buildSummaryItems() {
@@ -1423,10 +1380,6 @@ function buildTravelReviseInput(requestData) {
   ].join("\n");
 }
 
-function buildTravelRevisionInstructions() {
-  return buildTravelReviseInstructions();
-}
-
 function buildProviderUrl(provider, model, apiKey) {
   if (provider === "groq") {
     return "https://api.groq.com/openai/v1/chat/completions";
@@ -1448,7 +1401,7 @@ function buildProviderHeaders(provider, apiKey) {
   };
 }
 
-function buildProviderBody(provider, { model, instructions, input }) {
+function buildProviderBody(provider, { model, instructions, input, temperature = 0.2 }) {
   if (provider === "groq") {
     return {
       model,
@@ -1456,7 +1409,7 @@ function buildProviderBody(provider, { model, instructions, input }) {
         { role: "system", content: instructions },
         { role: "user", content: input }
       ],
-      temperature: 0.2,
+      temperature,
       response_format: { type: "json_object" }
     };
   }
@@ -1472,7 +1425,7 @@ function buildProviderBody(provider, { model, instructions, input }) {
       }
     ],
     generationConfig: {
-      temperature: 0.2,
+      temperature,
       responseMimeType: "application/json"
     }
   };
@@ -1496,197 +1449,57 @@ async function readJsonResponse(response) {
   }
 }
 
-async function callGeminiDirect({ apiKey, model, instructions, input }) {
-  const safeApiKey = normalizeString(apiKey);
-  const safeModel = normalizeString(model);
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(safeModel)}:generateContent?key=${encodeURIComponent(safeApiKey)}`;
-  const requestBody = {
-    contents: [
-      {
-        parts: [
-          {
-            text: `${instructions}\n\n${input}`
-          }
-        ]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.7,
-      responseMimeType: "application/json"
-    }
-  };
-
-  debugLog("Gemini direct request", {
-    provider: "gemini",
-    model: safeModel,
-    url: endpoint,
-    apiKey: "***",
-    body: requestBody
-  });
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(requestBody)
-  });
-
-  const responseJson = await readJsonResponse(response);
-
-  if (!response.ok) {
-    throw new Error("다시 시도해 주세요");
+async function fetchJson(url, options = {}) {
+  // 네트워크 요청과 JSON 파싱을 한 곳에서 처리해 중복을 줄입니다.
+  try {
+    const response = await fetch(url, options);
+    const responseJson = await readJsonResponse(response);
+    return { response, responseJson };
+  } catch (networkError) {
+    const error = new Error(networkError?.message || "Request failed.");
+    error.code = "NETWORK_ERROR";
+    throw error;
   }
-
-  return {
-    provider: "gemini",
-    model: safeModel,
-    outputText: responseJson?.candidates?.[0]?.content?.parts?.[0]?.text || ""
-  };
 }
 
-async function callGroqDirect({ apiKey, model, instructions, input }) {
+async function callDirectProviderApi(provider, { apiKey, model, instructions, input }) {
+  const safeProvider = normalizeProviderName(provider);
   const safeApiKey = normalizeString(apiKey);
-  const safeModel = normalizeString(model);
-  const endpoint = "https://api.groq.com/openai/v1/chat/completions";
-  const requestHeaders = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${safeApiKey}`
-  };
-  const requestBody = {
+  const safeModel = normalizeString(model) || getDefaultModelForProvider(safeProvider);
+  const requestInput = `${normalizeString(input)}`;
+  const requestBody = buildProviderBody(safeProvider, {
     model: safeModel,
-    messages: [
-      { role: "system", content: instructions },
-      { role: "user", content: input }
-    ],
-    temperature: 0.7,
-    response_format: { type: "json_object" }
-  };
-
-  debugLog("Groq direct request", {
-    provider: "groq",
-    model: safeModel,
-    url: endpoint,
-    apiKey: "***",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer ***"
-    },
-    body: requestBody
-  });
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: requestHeaders,
-    body: JSON.stringify(requestBody)
-  });
-
-  const responseJson = await readJsonResponse(response);
-
-  if (!response.ok) {
-    throw new Error("다시 시도해 주세요");
-  }
-
-  return {
-    provider: "groq",
-    model: safeModel,
-    outputText: responseJson?.choices?.[0]?.message?.content || ""
-  };
-}
-
-async function callDirectProvider(provider, requestType, requestPayload, requestMeta = {}) {
-  const activeAiSettings = getActiveAiSettings();
-  const apiKey = normalizeString(activeAiSettings.apiKey);
-  const model = normalizeString(activeAiSettings.model) || getDefaultModelForProvider(provider);
-
-  if (!apiKey) {
-    throw new Error("API ???뺤씤???꾩슂?⑸땲??");
-  }
-
-  let instructions = "";
-  let inputTitle = "";
-
-  if (requestType === "options") {
-    instructions = buildTravelOptionsInstructions(requestMeta.instructionSuffix || "");
-    inputTitle = "User input:";
-  } else if (requestType === "details") {
-    instructions = buildTravelDetailsInstructions(requestMeta.instructionSuffix || "");
-    inputTitle = "User input for detailed travel plan generation:";
-  } else {
-    instructions = buildTravelRevisionInstructions();
-    inputTitle = "User input for travel plan revision:";
-  }
-
-  const fullInput = `${inputTitle}\n${JSON.stringify(requestPayload, null, 2)}${requestMeta.inputSuffix ? `\n${requestMeta.inputSuffix}` : ""}`;
-
-  if (provider === "gemini") {
-    const geminiResult = await callGeminiDirect({
-      apiKey,
-      model,
-      instructions,
-      input: fullInput
-    });
-
-    return {
-      parsed: parseJsonSafely(geminiResult.outputText),
-      provider: geminiResult.provider,
-      model: geminiResult.model
-    };
-  }
-
-  if (provider === "groq") {
-    const groqResult = await callGroqDirect({
-      apiKey,
-      model,
-      instructions,
-      input: fullInput
-    });
-
-    return {
-      parsed: parseJsonSafely(groqResult.outputText),
-      provider: groqResult.provider,
-      model: groqResult.model
-    };
-  }
-
-  const requestUrl = buildProviderUrl(provider, model, apiKey);
-  const requestHeaders = buildProviderHeaders(provider, apiKey);
-  const requestBody = buildProviderBody(provider, {
-    model,
     instructions,
-    input: fullInput
+    input: requestInput,
+    temperature: 0.7
   });
+  const requestUrl = buildProviderUrl(safeProvider, safeModel, safeApiKey);
+  const requestHeaders = buildProviderHeaders(safeProvider, safeApiKey);
 
   debugLog("Direct AI request", {
-    provider,
-    model,
-    url: requestUrl.replace(encodeURIComponent(apiKey), "***"),
-    apiKey,
+    provider: safeProvider,
+    model: safeModel,
+    url: requestUrl.replace(encodeURIComponent(safeApiKey), "***"),
+    apiKey: "***",
     headers: requestHeaders,
     body: requestBody
   });
 
-  const response = await fetch(requestUrl, {
+  const { response, responseJson } = await fetchJson(requestUrl, {
     method: "POST",
     headers: requestHeaders,
     body: JSON.stringify(requestBody)
   });
 
-  const responseJson = await readJsonResponse(response);
-
   if (!response.ok) {
-    throw new Error(
-      responseJson?.error?.message ||
-      responseJson?.message ||
-      responseJson?.rawText ||
-      "AI ?붿껌???ㅽ뙣?덉뒿?덈떎."
-    );
+    // 직접 AI 호출의 실패 메시지는 기존 동작과 동일하게 단순 실패로 유지합니다.
+    throw new Error("다시 시도해 주세요");
   }
 
   return {
-    parsed: parseJsonSafely(extractProviderText(provider, responseJson)),
-    provider,
-    model
+    parsed: parseJsonSafely(extractProviderText(safeProvider, responseJson)),
+    provider: safeProvider,
+    model: safeModel
   };
 }
 
@@ -1703,7 +1516,7 @@ async function callServerApi(path, payload) {
     }
   });
 
-  const response = await fetch(`${CONFIG.API_BASE_URL}${path}`, {
+  const { response, responseJson } = await fetchJson(`${CONFIG.API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -1713,8 +1526,6 @@ async function callServerApi(path, payload) {
       aiSettings: aiSettingsPayload
     })
   });
-
-  const responseJson = await readJsonResponse(response);
 
   if (!response.ok || responseJson?.success === false) {
     const message =
@@ -1731,6 +1542,11 @@ async function callServerApi(path, payload) {
   }
 
   return responseJson.data || responseJson;
+}
+
+function isRecoverableAiError(error) {
+  // 네트워크 계층만 fallback 대상으로 보고, 인증/모델/서버 오류는 화면에 그대로 노출합니다.
+  return error?.code === "NETWORK_ERROR" || error?.code === "AI_NETWORK_ERROR";
 }
 
 function createMockDetailsFromOptions(options) {
@@ -1991,31 +1807,20 @@ async function callDirectAI({ instructions, input }) {
     throw new Error("API Key ?뺤씤 ?꾩슂");
   }
 
-  let result;
-
-  if (provider === "gemini") {
-    result = await callGeminiDirect({
-      apiKey,
-      model,
-      instructions,
-      input
-    });
-  } else if (provider === "groq") {
-    result = await callGroqDirect({
-      apiKey,
-      model,
-      instructions,
-      input
-    });
-  } else {
-    throw new Error("AI provider ?ㅼ젙 ?뺤씤 ?꾩슂");
-  }
+  const result = await callDirectProviderApi(provider, {
+    apiKey,
+    model,
+    instructions,
+    input
+  });
 
   return {
     success: true,
     provider: result.provider,
     model: result.model,
-    data: safeJsonParse(result.outputText) || {}
+    // direct/provider 응답을 하나의 필드로 통일해 후속 서비스에서 같은 형태로 읽습니다.
+    data: result.parsed || {},
+    parsed: result.parsed || {}
   };
 }
 
@@ -2065,9 +1870,10 @@ const directAiTravelService = {
       });
 
       const normalizedResult = normalizeOptionsResult({
+        // direct AI 응답도 server 응답과 같은 options 구조를 사용합니다.
         options: normalizeArray(directResult.data?.options),
         source: "ai-direct",
-      sourceLabel: `${CONFIG.AI_PROVIDERS[directResult.provider].label} AI 직접 · ${directResult.model}`
+        sourceLabel: `${CONFIG.AI_PROVIDERS[directResult.provider].label} AI 직접 · ${directResult.model}`
       }, requestData);
 
       if (normalizedResult.options.length === 3) {
@@ -2102,6 +1908,7 @@ const directAiTravelService = {
         });
 
         const normalizedResult = normalizePlansResult({
+          // direct AI 응답도 server 응답과 같은 plans 구조를 사용합니다.
           plans: normalizeArray(result.data?.plans)
         });
 
@@ -2144,12 +1951,13 @@ const directAiTravelService = {
     };
 
     try {
-    const result = await callDirectAI({
+      const result = await callDirectAI({
       instructions: buildTravelReviseInstructions(),
       input: buildTravelReviseInput(requestData)
     });
 
       const normalizedResult = normalizePlansResult({
+        // direct AI 응답도 server 응답과 같은 plans 구조를 사용합니다.
         plans: normalizeArray(result.data?.plans)
       });
       const revisionSummary = normalizeString(result.data?.revisionSummary);
@@ -2327,6 +2135,45 @@ function applySampleInput() {
   });
 }
 
+async function runTravelOptionsFlow({ targetScreen } = {}) {
+  // 옵션 생성 중에는 같은 화면에 머물며 버튼만 잠그고, 완료/실패 후에만 화면을 갱신합니다.
+  startLoading("options");
+  renderScreen(targetScreen || (appState.hasCountry ? "decided-form" : "undecided-form"), { pushHistory: false });
+
+  try {
+    const result = await generateTravelOptions();
+    updateState({
+      isLoading: false,
+      loadingStep: "",
+      generatedOptions: normalizeArray(result.options).map(normalizeOption).slice(0, 3),
+      optionSource: normalizeString(result.source),
+      optionSourceLabel: normalizeString(result.sourceLabel),
+      selectedOptions: [],
+      detailedPlans: [],
+      errorMessage: ""
+    });
+    showAppToast("옵션 생성 완료", "success");
+    renderScreen("options");
+    return true;
+  } catch (error) {
+    const message = normalizeString(error?.message) || "옵션 생성에 실패했습니다.";
+    updateState({
+      isLoading: false,
+      loadingStep: "",
+      generatedOptions: [],
+      optionSource: "",
+      optionSourceLabel: "",
+      selectedOptions: [],
+      detailedPlans: [],
+      errorMessage: message
+    });
+    // 실패 원문은 화면에 남기고, 토스트는 보조 알림으로만 사용합니다.
+    showAppToast(message, "error");
+    renderScreen(targetScreen || (appState.hasCountry ? "decided-form" : "undecided-form"), { pushHistory: false });
+    return false;
+  }
+}
+
 async function handleTravelFormSubmit(form) {
   const formData = new FormData(form);
 
@@ -2344,37 +2191,7 @@ async function handleTravelFormSubmit(form) {
     revisionSummary: ""
   });
 
-  try {
-    startLoading("options");
-    renderScreen(appState.hasCountry ? "decided-form" : "undecided-form", { pushHistory: false });
-    const result = await generateTravelOptions();
-    updateState({
-      isLoading: false,
-      loadingStep: "",
-      generatedOptions: normalizeArray(result.options).map(normalizeOption).slice(0, 3),
-      optionSource: normalizeString(result.source),
-      optionSourceLabel: normalizeString(result.sourceLabel),
-      selectedOptions: [],
-      detailedPlans: [],
-      errorMessage: ""
-    });
-    showAppToast("옵션 생성 완료", "success");
-    renderScreen("options");
-  } catch (error) {
-    const message = normalizeString(error?.message) || "옵션 생성에 실패했습니다.";
-    updateState({
-      isLoading: false,
-      loadingStep: "",
-      generatedOptions: [],
-      optionSource: "",
-      optionSourceLabel: "",
-      selectedOptions: [],
-      detailedPlans: [],
-      errorMessage: message
-    });
-    showAppToast(message, "error");
-    renderScreen(appState.hasCountry ? "decided-form" : "undecided-form", { pushHistory: false });
-  }
+  await runTravelOptionsFlow({ targetScreen: appState.hasCountry ? "decided-form" : "undecided-form" });
 }
 
 async function handleBuildDetails() {
@@ -2499,10 +2316,12 @@ function bindScreenEvents(screenName) {
       const enteredKey = normalizeString(keyInput?.value);
 
       const currentAiSettings = getActiveAiSettings();
+      // Provider가 바뀐 경우 이전 provider의 API Key를 그대로 재사용하지 않도록 막습니다.
+      const apiKey = enteredKey || (provider === currentAiSettings.provider ? currentAiSettings.apiKey : "");
       saveAiSettings({
         provider,
         model,
-        apiKey: enteredKey || currentAiSettings.apiKey
+        apiKey
       });
       updateState({
         errorMessage: ""
@@ -2526,33 +2345,16 @@ function bindScreenEvents(screenName) {
     }
 
     if (action === "refresh-options") {
-      try {
-        setLoading(true);
-        const result = await generateTravelOptions();
-        updateState({
-          isLoading: false,
-          generatedOptions: normalizeArray(result.options).map(normalizeOption).slice(0, 3),
-          optionSource: normalizeString(result.source),
-          optionSourceLabel: normalizeString(result.sourceLabel),
-          selectedOptions: [],
-          detailedPlans: [],
-          errorMessage: ""
-        });
-        renderScreen("options", { pushHistory: false });
-      } catch (error) {
-        const message = normalizeString(error?.message) || "옵션 생성에 실패했습니다.";
-        updateState({
-          isLoading: false,
-          loadingStep: "",
-          generatedOptions: [],
-          optionSource: "",
-          optionSourceLabel: "",
-          selectedOptions: [],
-          detailedPlans: [],
-          errorMessage: message
-        });
-        renderScreen("options", { pushHistory: false });
-      }
+      // 옵션 카드 화면에서 다시 생성할 때도 같은 AI 호출 경로를 사용합니다.
+      await runTravelOptionsFlow({ targetScreen: "options" });
+      return;
+    }
+
+    if (action === "retry-options") {
+      // 실패 후 재시도는 마지막 입력값을 그대로 사용합니다.
+      await runTravelOptionsFlow({
+        targetScreen: appState.hasCountry ? "decided-form" : "undecided-form"
+      });
       return;
     }
 
@@ -2645,8 +2447,38 @@ function bindScreenEvents(screenName) {
 }
 
 function renderStatusMarkup() {
+  if (appState.isLoading) {
+    // AI 호출 중임을 화면에서 바로 보여줍니다.
+    const loadingLabel = appState.loadingStep === "details"
+      ? "상세 일정 생성 중"
+      : "옵션 생성 중";
+    return `
+      <section class="status-card status-card-loading">
+        <div class="loading-status">
+          <div class="loading-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="loading-copy">
+            <p class="loading-title">${escapeHtml(loadingLabel)}</p>
+            <p class="loading-text">AI 응답을 기다리고 있습니다.</p>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
   if (appState.errorMessage) {
-    return `<section class="status-card"><p>${escapeHtml(appState.errorMessage)}</p></section>`;
+    // 서버가 준 원문 메시지를 그대로 보여주고, 바로 재시도할 수 있게 합니다.
+    const showRetry = appState.currentScreen === "decided-form" || appState.currentScreen === "undecided-form";
+
+    return `
+      <section class="status-card">
+        <p>${escapeHtml(appState.errorMessage)}</p>
+        ${showRetry ? `
+          <div class="button-row" style="margin-top: 12px;">
+            <button class="primary-button" type="button" data-action="retry-options">다시 시도</button>
+          </div>
+        ` : ""}
+      </section>
+    `;
   }
 
   return "";
