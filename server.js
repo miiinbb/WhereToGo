@@ -227,6 +227,10 @@ function getStatusCodeForProviderError(status) {
     return "AI_RATE_LIMIT_ERROR";
   }
 
+  if (status === 500 || status === 502 || status === 503 || status === 504) {
+    return "AI_SERVER_ERROR";
+  }
+
   return "AI_PROVIDER_ERROR";
 }
 
@@ -239,6 +243,20 @@ async function readJsonResponse(response) {
     return {
       rawText: text
     };
+  }
+}
+
+async function fetchJson(url, options = {}) {
+  // provider 호출의 네트워크 실패와 응답 파싱을 한 곳에서 처리합니다.
+  try {
+    const response = await fetch(url, options);
+    const responseJson = await readJsonResponse(response);
+    return { response, responseJson };
+  } catch (networkError) {
+    const error = new Error(networkError?.message || "Provider request failed.");
+    error.code = "AI_NETWORK_ERROR";
+    error.status = 502;
+    throw error;
   }
 }
 
@@ -469,22 +487,11 @@ async function callProvider(provider, { model, instructions, input, apiKey }) {
     input
   });
 
-  let response;
-
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body)
-    });
-  } catch (networkError) {
-    const error = new Error(networkError?.message || "Provider request failed.");
-    error.code = "AI_NETWORK_ERROR";
-    error.status = 502;
-    throw error;
-  }
-
-  const responseJson = await readJsonResponse(response);
+  const { response, responseJson } = await fetchJson(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body)
+  });
 
   if (!response.ok) {
     const message =
@@ -510,15 +517,41 @@ async function callProvider(provider, { model, instructions, input, apiKey }) {
   };
 }
 
+function getUserFriendlyProviderErrorMessage(error) {
+  // 사용자에게는 상태 코드별로 짧고 이해하기 쉬운 메시지만 보여줍니다.
+  switch (error?.code) {
+    case "AI_KEY_MISSING":
+    case "AI_AUTH_ERROR":
+      return "잘못된 API Key입니다.";
+    case "AI_MODEL_ERROR":
+      return "선택한 모델을 사용할 수 없습니다.";
+    case "AI_RATE_LIMIT_ERROR":
+      return "API 사용량이 초과되었습니다.";
+    case "AI_SERVER_ERROR":
+    case "AI_NETWORK_ERROR":
+      return "AI 서버 연결에 실패했습니다.";
+    case "AI_JSON_PARSE_ERROR":
+      return "AI 응답을 처리할 수 없습니다.";
+    default:
+      return error?.message || "AI 요청에 실패했습니다.";
+  }
+}
+
 function createProviderErrorResponse(res, error) {
+  // 원본 Error는 서버 콘솔에 그대로 남깁니다.
+  console.error(error);
+
   res.status(error.status || 500).json({
     success: false,
     code: error.code || "AI_PROVIDER_ERROR",
-    error: error.message || "Provider request failed."
+    error: getUserFriendlyProviderErrorMessage(error),
+    details: error?.message || ""
   });
 }
 
-function createAiParseErrorResponse(res) {
+function createAiParseErrorResponse(res, error) {
+  // 파싱 실패 원인도 서버 콘솔에 원문 그대로 남깁니다.
+  console.error(error);
   sendAiParseError(res);
 }
 
@@ -552,7 +585,7 @@ async function handleTravelOptionsRequest(req, res) {
     res.json(result);
   } catch (error) {
     if (error.code === "AI_JSON_PARSE_ERROR") {
-      createAiParseErrorResponse(res);
+      createAiParseErrorResponse(res, error);
       return;
     }
 
@@ -583,7 +616,7 @@ async function handleTravelDetailsRequest(req, res) {
     res.json(result);
   } catch (error) {
     if (error.code === "AI_JSON_PARSE_ERROR") {
-      createAiParseErrorResponse(res);
+      createAiParseErrorResponse(res, error);
       return;
     }
 
@@ -622,7 +655,7 @@ async function handleTravelReviseRequest(req, res) {
     res.json(result);
   } catch (error) {
     if (error.code === "AI_JSON_PARSE_ERROR") {
-      createAiParseErrorResponse(res);
+      createAiParseErrorResponse(res, error);
       return;
     }
 
