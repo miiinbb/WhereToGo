@@ -4,7 +4,7 @@ const APP_VERSION = "v1.41.3";
 
 const CONFIG = {
   USE_MOCK: false,
-  DIRECT_AI_MODE: true,
+  DIRECT_AI_MODE: false,
   API_BASE_URL: "http://localhost:3000",
   DEBUG_MODE: true,
   AI_PROVIDERS: {
@@ -557,6 +557,15 @@ function getActiveAiSettings() {
   return normalizeAiSettings(aiSettings);
 }
 
+function getActiveAiSourceLabel() {
+  const activeAiSettings = getActiveAiSettings();
+  const provider = normalizeProviderName(activeAiSettings.provider);
+  const providerLabel = CONFIG.AI_PROVIDERS[provider]?.label || "AI";
+  const model = normalizeString(activeAiSettings.model) || getDefaultModelForProvider(provider);
+
+  return `${providerLabel} · ${model}`;
+}
+
 function loadState() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
@@ -817,7 +826,7 @@ function renderAiSettingsMarkup() {
           <input class="input" type="password" name="aiApiKey" value="" placeholder="키 입력" autocomplete="off" />
         </label>
 
-        <p class="screen-label">개인 테스트용입니다. 배포용 서비스에서는 서버 연동을 사용하세요.</p>
+        <p class="screen-label">저장한 설정은 서버 요청에 함께 전달됩니다.</p>
         <p class="screen-label">API Key는 sessionStorage에만 저장됩니다.</p>
 
         <section class="status-card">
@@ -1682,12 +1691,16 @@ async function callDirectProvider(provider, requestType, requestPayload, request
 }
 
 async function callServerApi(path, payload) {
+  const aiSettingsPayload = getActiveAiSettings();
   debugLog("Server AI request", {
     path,
     headers: {
       "Content-Type": "application/json"
     },
-    body: payload
+    body: {
+      ...payload,
+      aiSettings: aiSettingsPayload
+    }
   });
 
   const response = await fetch(`${CONFIG.API_BASE_URL}${path}`, {
@@ -1695,13 +1708,26 @@ async function callServerApi(path, payload) {
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      ...payload,
+      aiSettings: aiSettingsPayload
+    })
   });
 
   const responseJson = await readJsonResponse(response);
 
   if (!response.ok || responseJson?.success === false) {
-    throw new Error(responseJson?.error || responseJson?.message || "?쒕쾭 ?붿껌???ㅽ뙣?덉뒿?덈떎.");
+    const message =
+      responseJson?.error?.message ||
+      responseJson?.error ||
+      responseJson?.message ||
+      responseJson?.details ||
+      "서버 요청에 실패했습니다.";
+    const error = new Error(message);
+    error.status = response.status;
+    error.code = responseJson?.code || responseJson?.error?.code || "SERVER_REQUEST_FAILED";
+    error.details = responseJson?.details || null;
+    throw error;
   }
 
   return responseJson.data || responseJson;
@@ -1744,6 +1770,80 @@ function createMockDetailsFromOptions(options) {
       }
     ]
   }));
+}
+
+function buildFallbackItineraryDay(option, dayNumber, phase = "middle") {
+  const city = normalizeString(option?.city) || "현지";
+  const theme = normalizeString(option?.theme) || "여행";
+  const dayLabel = `${dayNumber}일차`;
+
+  const dayTemplates = {
+    start: [
+      { time: "09:00", place: `${city} 숙소`, activity: "아침 준비 및 체크아웃", move: "도보" },
+      { time: "10:30", place: `${city} 중심지`, activity: "도착 후 주변 산책", move: "대중교통" },
+      { time: "12:30", place: "현지 식당", activity: "점심 식사", move: "도보" },
+      { time: "15:00", place: `${city} 핵심 명소`, activity: `${theme} 중심 일정`, move: "대중교통" }
+    ],
+    middle: [
+      { time: "09:30", place: "카페", activity: "여유로운 아침", move: "도보" },
+      { time: "11:00", place: `${city} 대표 명소`, activity: "핵심 관광", move: "대중교통" },
+      { time: "15:00", place: "휴식 공간", activity: "휴식 및 정리", move: "도보" },
+      { time: "18:30", place: "저녁 식사 거리", activity: "저녁 식사", move: "도보" }
+    ],
+    end: [
+      { time: "09:00", place: "호텔", activity: "체크아웃", move: "도보" },
+      { time: "10:30", place: `${city} 마지막 명소`, activity: "마무리 산책", move: "대중교통" },
+      { time: "13:00", place: "현지 맛집", activity: "마지막 점심", move: "도보" },
+      { time: "16:00", place: "공항/역", activity: "이동 및 귀가 준비", move: "대중교통" }
+    ]
+  };
+
+  const schedule = phase === "start" ? dayTemplates.start : phase === "end" ? dayTemplates.end : dayTemplates.middle;
+
+  return {
+    day: dayNumber,
+    title: dayLabel,
+    schedule
+  };
+}
+
+function createFallbackDetailPlansFromRequest(requestData) {
+  const selectedOptions = normalizeArray(requestData?.selectedOptions);
+  const expectedDayCount = Number(requestData?.expectedDayCount) || 0;
+
+  return selectedOptions.map((option, index) => {
+    const basePlan = createMockDetailsFromOptions([option])[0] || {
+      optionId: option?.id || `option-${String.fromCharCode(97 + index)}`,
+      label: option?.label || String.fromCharCode(65 + index),
+      country: normalizeString(option?.country),
+      city: normalizeString(option?.city),
+      duration: normalizeString(requestData?.duration) || "3박 4일",
+      travelDate: normalizeString(requestData?.travelDate) || "미정",
+      weather: {
+        summary: "여행하기 무난한 날씨",
+        temperature: "18~25도",
+        rainLevel: "보통",
+        outfitNote: "가벼운 겉옷 추천"
+      },
+      itinerary: []
+    };
+
+    const targetDayCount = Math.max(expectedDayCount, normalizeArray(basePlan.itinerary).length || 2);
+    const itinerary = normalizeArray(basePlan.itinerary).slice(0, targetDayCount);
+
+    while (itinerary.length < targetDayCount) {
+      const nextDayNumber = itinerary.length + 1;
+      const phase = nextDayNumber === 1 ? "start" : nextDayNumber === targetDayCount ? "end" : "middle";
+      itinerary.push(buildFallbackItineraryDay(option, nextDayNumber, phase));
+    }
+
+    return normalizePlan({
+      ...basePlan,
+      duration: normalizeString(requestData?.duration) || basePlan.duration,
+      travelDate: normalizeString(requestData?.travelDate) || basePlan.travelDate,
+      itinerary
+    }, index);
+  });
 }
 
 function optionMatchesPreferences(option, payload) {
@@ -1866,7 +1966,7 @@ function normalizeOptionsResult(result, payload) {
 
   return {
     ...result,
-    options: finalizeTravelOptions(result?.options, payload, { allowFallback: false })
+    options: finalizeTravelOptions(result?.options, payload, { allowFallback: true })
   };
 }
 
@@ -2087,28 +2187,92 @@ const directAiTravelService = {
 const apiTravelService = {
   async getOptions() {
     const payload = buildOptionsRequest();
-    const result = await callServerApi("/api/travel-options", payload);
-    const normalizedResult = normalizeOptionsResult({
-      ...result,
-      source: "server-ai",
-      sourceLabel: "Server AI"
-    }, payload);
+    try {
+      const result = await callServerApi("/api/travel-options", payload);
+      const normalizedResult = normalizeOptionsResult({
+        ...result,
+        source: "server-ai",
+        sourceLabel: `${getActiveAiSourceLabel()} · server`
+      }, payload);
 
-    if (normalizedResult.options.length !== 3) {
-      throw new Error("옵션 3개를 만들지 못했습니다. 다시 시도해 주세요.");
+      if (normalizedResult.options.length === 3) {
+        return normalizedResult;
+      }
+
+      return {
+        ...normalizedResult,
+        options: finalizeTravelOptions(normalizedResult.options, payload, { allowFallback: true }),
+        source: "server-ai-fallback",
+        sourceLabel: `${getActiveAiSourceLabel()} · server fallback`
+      };
+    } catch (error) {
+      if (!isRecoverableAiError(error)) {
+        throw error;
+      }
+
+      return {
+        options: finalizeTravelOptions([], payload, { allowFallback: true }),
+        source: "server-ai-fallback",
+        sourceLabel: `${getActiveAiSourceLabel()} · fallback`
+      };
     }
-
-    return normalizedResult;
   },
   async getDetails() {
     const payload = buildDetailsRequest();
-    const result = await callServerApi("/api/travel-details", payload);
-    return normalizePlansResult(result);
+    try {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const result = await callServerApi("/api/travel-details", payload);
+        const normalizedResult = normalizePlansResult(result);
+        const hasAllPlans = normalizedResult.plans.length === payload.selectedOptions.length;
+        const hasAllDays = !payload.expectedDayCount
+          || normalizedResult.plans.every((plan) => isValidDetailPlanLength(plan, payload.expectedDayCount));
+
+        if (hasAllPlans && hasAllDays) {
+          return normalizedResult;
+        }
+      }
+
+      return {
+        plans: createFallbackDetailPlansFromRequest(payload)
+      };
+    } catch (error) {
+      if (!isRecoverableAiError(error)) {
+        throw error;
+      }
+
+      return {
+        plans: createFallbackDetailPlansFromRequest(payload)
+      };
+    }
   },
   async revisePlans() {
     const payload = buildRevisionRequest(normalizeString(appState.revisionRequest));
-    const result = await callServerApi("/api/travel-revise", payload);
-    return normalizePlansResult(result);
+    try {
+      const result = await callServerApi("/api/travel-revise", payload);
+      const normalizedResult = normalizePlansResult(result);
+      const revisionSummary = normalizeString(result.revisionSummary) || normalizeString(normalizedResult.revisionSummary);
+
+      if (normalizedResult.plans.length) {
+        return {
+          ...normalizedResult,
+          revisionSummary
+        };
+      }
+
+      return {
+        plans: normalizePlansResult({ plans: appState.detailedPlans }).plans,
+        revisionSummary: "AI 응답이 불완전해서 기존 일정을 유지했습니다."
+      };
+    } catch (error) {
+      if (!isRecoverableAiError(error)) {
+        throw error;
+      }
+
+      return {
+        plans: normalizePlansResult({ plans: appState.detailedPlans }).plans,
+        revisionSummary: "AI 응답이 불완전해서 기존 일정을 유지했습니다."
+      };
+    }
   }
 };
 
@@ -2126,78 +2290,10 @@ function getTravelService() {
 
 async function generateTravelOptions() {
   return getTravelService().getOptions(0);
-  const payload = buildOptionsRequest();
-
-  if (CONFIG.USE_MOCK) {
-    return {
-      options: finalizeTravelOptions(MOCK_OPTIONS, payload),
-      source: "mock",
-      sourceLabel: "Mock"
-    };
-  }
-
-  if (CONFIG.DIRECT_AI_MODE) {
-    const firstResult = await callDirectProvider(getActiveAiSettings().provider, "options", payload);
-    const firstPassOptions = finalizeTravelOptions(firstResult.parsed.options, payload, { allowFallback: false });
-
-    if (firstPassOptions.length === 3) {
-      return {
-        options: firstPassOptions,
-        source: "ai-direct",
-        sourceLabel: `${CONFIG.AI_PROVIDERS[firstResult.provider].label} AI 쨌 ${firstResult.model}`
-      };
-    }
-
-    const retryResult = await callDirectProvider(
-      getActiveAiSettings().provider,
-      "options",
-      payload,
-      {
-        instructionSuffix: buildOptionRetryInstruction(payload)
-      }
-    );
-    const retryOptions = finalizeTravelOptions(retryResult.parsed.options, payload, { allowFallback: false });
-
-    if (retryOptions.length === 3) {
-      return {
-        options: retryOptions,
-        source: "ai-direct",
-        sourceLabel: `${CONFIG.AI_PROVIDERS[retryResult.provider].label} AI 쨌 ${retryResult.model}`
-      };
-    }
-
-      throw new Error("조건에 맞는 AI 옵션 3개를 만들지 못했습니다. 입력 조건을 조금 바꿔 다시 시도해 주세요.");
-  }
-
-  const result = await callServerApi("/api/travel-options", payload);
-  const validatedOptions = finalizeTravelOptions(result.options, payload, { allowFallback: false });
-
-  if (validatedOptions.length !== 3) {
-    throw new Error("조건에 맞는 옵션을 만들지 못했습니다. 다시 시도해 주세요.");
-  }
-
-  return {
-    ...result,
-    options: validatedOptions,
-    source: "server-ai",
-    sourceLabel: "Server AI"
-  };
 }
 
 async function generateTravelDetails() {
   return getTravelService().getDetails();
-  const payload = buildDetailsRequest();
-
-  if (CONFIG.USE_MOCK) {
-    return { plans: createMockDetailsFromOptions(payload.selectedOptions) };
-  }
-
-  if (CONFIG.DIRECT_AI_MODE) {
-    const result = await callDirectProvider(getActiveAiSettings().provider, "details", payload);
-    return result.parsed;
-  }
-
-  return callServerApi("/api/travel-details", payload);
 }
 
 async function reviseTravelDetails(revisionText) {
@@ -2265,6 +2361,7 @@ async function handleTravelFormSubmit(form) {
     showAppToast("옵션 생성 완료", "success");
     renderScreen("options");
   } catch (error) {
+    const message = normalizeString(error?.message) || "옵션 생성에 실패했습니다.";
     updateState({
       isLoading: false,
       loadingStep: "",
@@ -2273,9 +2370,9 @@ async function handleTravelFormSubmit(form) {
       optionSourceLabel: "",
       selectedOptions: [],
       detailedPlans: [],
-      errorMessage: "옵션 생성에 실패했습니다."
+      errorMessage: message
     });
-    showAppToast("옵션 생성에 실패했습니다.", "error");
+    showAppToast(message, "error");
     renderScreen(appState.hasCountry ? "decided-form" : "undecided-form", { pushHistory: false });
   }
 }
@@ -2294,14 +2391,15 @@ async function handleBuildDetails() {
     showAppToast("상세 일정 생성 완료", "success");
     renderScreen("details");
   } catch (error) {
+    const message = normalizeString(error?.message) || "상세 일정 생성에 실패했습니다.";
     updateState({
       isLoading: false,
       loadingStep: "",
       detailedPlans: [],
       revisionSummary: "",
-      errorMessage: "상세 일정 생성에 실패했습니다."
+      errorMessage: message
     });
-    showAppToast("상세 일정 생성에 실패했습니다.", "error");
+    showAppToast(message, "error");
     renderScreen("options", { pushHistory: false });
   }
 }
@@ -2332,11 +2430,12 @@ async function handleRevisionSubmit(form) {
     showAppToast("수정 완료", "success");
     renderScreen("details", { pushHistory: false });
   } catch (error) {
+    const message = normalizeString(error?.message) || "수정 요청 처리에 실패했습니다.";
     updateState({
       isLoading: false,
-      errorMessage: error.message || "수정 요청 처리에 실패했습니다."
+      errorMessage: message
     });
-    showAppToast("수정 요청 처리에 실패했습니다.", "error");
+    showAppToast(message, "error");
     renderScreen("details", { pushHistory: false });
   }
 }
@@ -2441,6 +2540,7 @@ function bindScreenEvents(screenName) {
         });
         renderScreen("options", { pushHistory: false });
       } catch (error) {
+        const message = normalizeString(error?.message) || "옵션 생성에 실패했습니다.";
         updateState({
           isLoading: false,
           loadingStep: "",
@@ -2449,7 +2549,7 @@ function bindScreenEvents(screenName) {
           optionSourceLabel: "",
           selectedOptions: [],
           detailedPlans: [],
-          errorMessage: "옵션 생성에 실패했습니다."
+          errorMessage: message
         });
         renderScreen("options", { pushHistory: false });
       }

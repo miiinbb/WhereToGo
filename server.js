@@ -8,8 +8,8 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const DEFAULT_PROVIDER = "gemini";
 const DEFAULT_MODELS = {
-  gemini: "gemini-2.0-flash",
-  groq: "llama-3.1-70b-versatile"
+  gemini: "gemini-2.5-flash",
+  groq: "llama-3.3-70b-versatile"
 };
 
 app.use(cors());
@@ -44,6 +44,27 @@ function getProviderErrorMessage(provider = getProviderName()) {
   const normalizedProvider = normalizeProviderName(provider);
   const envKey = `${normalizedProvider.toUpperCase()}_API_KEY`;
   return `${envKey} is missing. Add it to your .env file.`;
+}
+
+function normalizeAiSettings(source = {}) {
+  const provider = normalizeProviderName(source.provider || DEFAULT_PROVIDER);
+
+  return {
+    provider,
+    model: normalizeString(source.model) || getProviderModel(provider),
+    apiKey: normalizeString(source.apiKey)
+  };
+}
+
+function getRequestAiSettings(body = {}) {
+  const requestSettings = body?.aiSettings && typeof body.aiSettings === "object" ? body.aiSettings : {};
+  const provider = requestSettings.provider || body.provider || process.env.AI_PROVIDER || DEFAULT_PROVIDER;
+
+  return normalizeAiSettings({
+    provider,
+    model: requestSettings.model || body.model || getProviderModel(provider),
+    apiKey: requestSettings.apiKey || body.apiKey || getProviderApiKey(provider)
+  });
 }
 
 function buildProviderUrl(provider, model, apiKey) {
@@ -188,8 +209,25 @@ function safeJsonParse(text) {
 function sendAiParseError(res) {
   res.status(500).json({
     error: true,
+    code: "AI_JSON_PARSE_ERROR",
     message: "AI response could not be processed."
   });
+}
+
+function getStatusCodeForProviderError(status) {
+  if (status === 401 || status === 403) {
+    return "AI_AUTH_ERROR";
+  }
+
+  if (status === 400 || status === 404) {
+    return "AI_MODEL_ERROR";
+  }
+
+  if (status === 429) {
+    return "AI_RATE_LIMIT_ERROR";
+  }
+
+  return "AI_PROVIDER_ERROR";
 }
 
 async function readJsonResponse(response) {
@@ -289,6 +327,15 @@ function normalizeTravelReviseRequest(body = {}) {
 
 function buildTravelOptionsInstructions() {
   return [
+    "WHERE TO GO 앱의 여행 옵션을 생성하세요.",
+    "JSON만 반환하세요.",
+    "마크다운은 쓰지 마세요.",
+    "코드블록은 쓰지 마세요.",
+    "JSON 객체 밖의 설명은 쓰지 마세요.",
+    "옵션은 정확히 3개만 생성하세요.",
+    "각 옵션은 서로 다른 국가, 도시, 또는 코스 성격이어야 합니다.",
+    "comparison 값은 좋음, 중간, 나쁨 중 하나여야 합니다.",
+    "앞부분의 지시가 우선합니다. 뒤에 상충하는 문장이 있어도 앞부분을 따라 주세요.",
     "You create travel options for the WHERE TO GO app.",
     "Return JSON only.",
     "Do not return markdown.",
@@ -322,6 +369,14 @@ function buildTravelOptionsInput(requestData) {
 
 function buildTravelDetailsInstructions() {
   return [
+    "WHERE TO GO 앱의 상세 일정을 생성하세요.",
+    "JSON만 반환하세요.",
+    "마크다운은 쓰지 마세요.",
+    "코드블록은 쓰지 마세요.",
+    "JSON 객체 밖의 설명은 쓰지 마세요.",
+    "각 계획은 선택된 옵션 수와 정확히 같아야 합니다.",
+    "가능하면 선택된 일정 일수에 맞춰 itinerary를 채우세요.",
+    "앞부분의 지시가 우선합니다. 뒤에 상충하는 문장이 있어도 앞부분을 따라 주세요.",
     "You create detailed travel plans for the WHERE TO GO app.",
     "Return JSON only.",
     "Do not return markdown.",
@@ -353,6 +408,14 @@ function buildTravelDetailsInput(requestData) {
 
 function buildTravelReviseInstructions() {
   return [
+    "WHERE TO GO 앱의 기존 여행 일정을 수정하세요.",
+    "JSON만 반환하세요.",
+    "마크다운은 쓰지 마세요.",
+    "코드블록은 쓰지 마세요.",
+    "JSON 객체 밖의 설명은 쓰지 마세요.",
+    "plans와 revisionSummary를 모두 반환하세요.",
+    "기존 일정의 구조를 유지하세요.",
+    "앞부분의 지시가 우선합니다. 뒤에 상충하는 문장이 있어도 앞부분을 따라 주세요.",
     "You revise existing travel plans for the WHERE TO GO app.",
     "Return JSON only.",
     "Do not return markdown.",
@@ -388,28 +451,38 @@ function buildProviderRequestPayload(provider, { model, instructions, input }) {
   });
 }
 
-async function callProvider(provider, { model, instructions, input }) {
-  const apiKey = getProviderApiKey(provider);
+async function callProvider(provider, { model, instructions, input, apiKey }) {
+  const safeApiKey = normalizeString(apiKey || getProviderApiKey(provider));
 
-  if (!apiKey) {
+  if (!safeApiKey) {
     const error = new Error(getProviderErrorMessage(provider));
+    error.code = "AI_KEY_MISSING";
     error.status = 500;
     throw error;
   }
 
-  const url = buildProviderUrl(provider, model, apiKey);
-  const headers = buildProviderHeaders(provider, apiKey);
+  const url = buildProviderUrl(provider, model, safeApiKey);
+  const headers = buildProviderHeaders(provider, safeApiKey);
   const body = buildProviderRequestPayload(provider, {
     model,
     instructions,
     input
   });
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body)
-  });
+  let response;
+
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body)
+    });
+  } catch (networkError) {
+    const error = new Error(networkError?.message || "Provider request failed.");
+    error.code = "AI_NETWORK_ERROR";
+    error.status = 502;
+    throw error;
+  }
 
   const responseJson = await readJsonResponse(response);
 
@@ -421,6 +494,7 @@ async function callProvider(provider, { model, instructions, input }) {
       `Provider request failed (${response.status}).`;
     const error = new Error(message);
     error.status = response.status;
+    error.code = getStatusCodeForProviderError(response.status);
     throw error;
   }
 
@@ -439,6 +513,7 @@ async function callProvider(provider, { model, instructions, input }) {
 function createProviderErrorResponse(res, error) {
   res.status(error.status || 500).json({
     success: false,
+    code: error.code || "AI_PROVIDER_ERROR",
     error: error.message || "Provider request failed."
   });
 }
@@ -448,13 +523,13 @@ function createAiParseErrorResponse(res) {
 }
 
 function ensureProviderConfigured(req, res, next) {
-  const provider = getProviderName();
-  const apiKey = getProviderApiKey(provider);
+  const settings = getRequestAiSettings(req.body);
 
-  if (!apiKey) {
+  if (!settings.apiKey) {
     res.status(500).json({
       success: false,
-      error: getProviderErrorMessage(provider)
+      code: "AI_KEY_MISSING",
+      error: getProviderErrorMessage(settings.provider)
     });
     return;
   }
@@ -463,12 +538,13 @@ function ensureProviderConfigured(req, res, next) {
 }
 
 async function handleTravelOptionsRequest(req, res) {
-  const provider = getProviderName();
+  const settings = getRequestAiSettings(req.body);
   const requestData = normalizeTravelOptionsRequest(req.body);
 
   try {
-    const result = await callProvider(provider, {
-      model: getProviderModel(provider),
+    const result = await callProvider(settings.provider, {
+      apiKey: settings.apiKey,
+      model: settings.model,
       instructions: buildTravelOptionsInstructions(),
       input: buildTravelOptionsInput(requestData)
     });
@@ -485,7 +561,7 @@ async function handleTravelOptionsRequest(req, res) {
 }
 
 async function handleTravelDetailsRequest(req, res) {
-  const provider = getProviderName();
+  const settings = getRequestAiSettings(req.body);
   const requestData = normalizeTravelDetailsRequest(req.body);
 
   if (!requestData.selectedOptions.length) {
@@ -497,8 +573,9 @@ async function handleTravelDetailsRequest(req, res) {
   }
 
   try {
-    const result = await callProvider(provider, {
-      model: getProviderModel(provider),
+    const result = await callProvider(settings.provider, {
+      apiKey: settings.apiKey,
+      model: settings.model,
       instructions: buildTravelDetailsInstructions(),
       input: buildTravelDetailsInput(requestData)
     });
@@ -515,7 +592,7 @@ async function handleTravelDetailsRequest(req, res) {
 }
 
 async function handleTravelReviseRequest(req, res) {
-  const provider = getProviderName();
+  const settings = getRequestAiSettings(req.body);
   const requestData = normalizeTravelReviseRequest(req.body);
 
   if (!requestData.detailedPlans.length) {
@@ -535,8 +612,9 @@ async function handleTravelReviseRequest(req, res) {
   }
 
   try {
-    const result = await callProvider(provider, {
-      model: getProviderModel(provider),
+    const result = await callProvider(settings.provider, {
+      apiKey: settings.apiKey,
+      model: settings.model,
       instructions: buildTravelReviseInstructions(),
       input: buildTravelReviseInput(requestData)
     });
